@@ -1,0 +1,52 @@
+{
+  "ipeiros": {
+    "A": {
+      "name": "Astria",
+      "symbol": "A",
+      "description": "",
+      "capital": {
+        "name": "Gorod",
+        "symbol": "A-G"
+      },
+      "governance": {
+        "type": "Democracy",
+        "ruling_faction": "The Mute Council",
+        "notable_laws": [],
+        "ideology": {
+          "economic_freedom": "Semi-Regulated",
+          "social": "Centrist",
+          "state_authority": "Libertarian"
+        }
+      },
+      "economy": {
+        "relative_population": "Moderate",
+        "relative_size": "Large",
+        "relative_wealth": "medium",
+        "region_tax_rate": 0.01
+      },
+      "connected_regions": [
+        {
+          "symbol": "EOW",
+          "travel_time": 1000000,
+          "route_danger": "extreme"
+        }
+      ],
+      "locales": ["A-G", "A-SWF"]
+    },
+    "EOW": {
+      "name": "Edge of the World",
+      "symbol": "EOW",
+      "description": "The unknowable void.",
+      "capital": {},
+      "governance": {},
+      "economy": {},
+      "connected_regions": [
+        {
+          "symbol": "A",
+          "travel_time": 1000000,
+          "route_danger": "extreme"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "A-G": [
+    {
+      "name": "Urug's Wares",
+      "symbol": "A-G-UW",
+      "description": "",
+      "discovered": true,
+      "type": "Shop",
+      "entities": []
+    }
+  ],
+  "A-SWF": [
+    {
+      "name": "Lumber Acreage",
+      "symbol": "A-SWF-LA",
+      "description": "",
+      "discovered": true,
+      "type": "Gathering Location",
+      "entities": []
+    }
+  ]
+}

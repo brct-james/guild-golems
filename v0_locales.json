@@ -1,0 +1,56 @@
+{
+  "A": [
+    {
+      "name": "Gorod",
+      "symbol": "A-G",
+      "x": 0,
+      "y": 0,
+      "description": "",
+      "type": "Capital City",
+      "governance": {
+        "allegiance": "Loyal",
+        "ruling_faction": "The Mute Council",
+        "notable_laws": [],
+        "ideology": {
+          "economic_freedom": "Mixed",
+          "social": "Progressive",
+          "state_authority": "Moderate"
+        }
+      },
+      "economy": {
+        "relative_population": "Large",
+        "relative_size": "Large",
+        "relative_wealth": "high",
+        "locale_tax_rate": 0.05
+      },
+      "connected_locales": ["A-SWF"],
+      "pois": ["A-G-UW"]
+    },
+    {
+      "name": "Scratchwood Forest",
+      "symbol": "A-SWF",
+      "x": 0,
+      "y": 0,
+      "description": "",
+      "type": "Forest",
+      "governance": {
+        "allegiance": "Loyal",
+        "ruling_faction": "The Mute Council",
+        "notable_laws": [],
+        "ideology": {
+          "economic_freedom": "Unregulated",
+          "social": "Individualist",
+          "state_authority": "Anarchic"
+        }
+      },
+      "economy": {
+        "relative_population": "Miniscule",
+        "relative_size": "Small",
+        "relative_wealth": "low",
+        "locale_tax_rate": 0.0
+      },
+      "connected_locales": ["A-G"],
+      "pois": ["A-SWF-LA"]
+    }
+  ]
+}
