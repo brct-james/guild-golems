@@ -13,7 +13,7 @@
         "notable_laws": [],
         "ideology": {
           "economic_freedom": "Mixed",
-          "social": "Progressive",
+          "social_values": "Progressive",
           "state_authority": "Moderate"
         }
       },
@@ -39,7 +39,7 @@
         "notable_laws": [],
         "ideology": {
           "economic_freedom": "Unregulated",
-          "social": "Individualist",
+          "social_values": "Individualist",
           "state_authority": "Anarchic"
         }
       },

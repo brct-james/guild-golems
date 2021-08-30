@@ -1,20 +1,18 @@
 {
-  "ipeiros": {
-    "A": {
+  "world_name": "ipeiros",
+  "regions": [
+    {
       "name": "Astria",
       "symbol": "A",
       "description": "",
-      "capital": {
-        "name": "Gorod",
-        "symbol": "A-G"
-      },
+      "capital_city": "A-G",
       "governance": {
         "type": "Democracy",
         "ruling_faction": "The Mute Council",
         "notable_laws": [],
         "ideology": {
-          "economic_freedom": "Semi-Regulated",
-          "social": "Centrist",
+          "economic_freedom": "Semi_Regulated",
+          "social_values": "Centrist",
           "state_authority": "Libertarian"
         }
       },
@@ -28,25 +26,25 @@
         {
           "symbol": "EOW",
           "travel_time": 1000000,
-          "route_danger": "extreme"
+          "route_danger": "Suicidal"
         }
       ],
       "locales": ["A-G", "A-SWF"]
     },
-    "EOW": {
+    {
       "name": "Edge of the World",
       "symbol": "EOW",
       "description": "The unknowable void.",
-      "capital": {},
+      "capital_city": "",
       "governance": {},
       "economy": {},
       "connected_regions": [
         {
           "symbol": "A",
           "travel_time": 1000000,
-          "route_danger": "extreme"
+          "route_danger": "Suicidal"
         }
       ]
     }
-  }
+  ]
 }
