@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/db"
 	"github.com/gorilla/mux"
 )
@@ -24,20 +25,29 @@ var dbMap = map[string]int{
 	"world": 1,
 }
 
+var worldName = "ipeiros"
+
+var udb db.Database
+var wdb db.Database
+
 func main() {
 	fmt.Println("Guild Golems Rest API Server v0.0.1")
 	fmt.Println("Connecting to Redis DB")
 	// fmt.Println(dbMap["users"])
 	// db.NewDatabase(RedisAddr, 0)
-	udb := db.NewDatabase(RedisAddr, dbMap["users"])
-	db.SetUser(udb, "testUser", "token", 0)
-	db.SetUser(udb, "Greenitthe", "token", 0)
+	udb = db.NewDatabase(RedisAddr, dbMap["users"])
+	db.CreateUser(udb, "testUser", "token", 0)
+	db.CreateUser(udb, "Greenitthe", "token", 0)
 	db.GetUser(udb, "testUser")
 	db.GetUser(udb, "Greenitthe")
-	wdb := db.NewDatabase(RedisAddr, dbMap["world"])
+	db.UpdateUser(udb, "Greenitthe", "token", ".coins", 10)
+	db.GetUser(udb, "Greenitthe")
+	wdb = db.NewDatabase(RedisAddr, dbMap["world"])
 	fmt.Println("Loading world json")
 	saveWorldJson(readJSON("./" + apiVersion + "_regions.json"), wdb)
-	db.GetWorld(wdb, "ipeiros")
+	db.GetWorld(wdb, worldName)
+	str, err := auth.GenerateToken("Greenitthe")
+	fmt.Printf("str token %s, %s \n", str, err)
 	handleRequests()
 }
 
@@ -51,6 +61,7 @@ func saveWorldJson(jsonBytes []byte, database db.Database) {
 	var res db.World
 	json.Unmarshal(jsonBytes, &res)
 	fmt.Println("Saving json to DB")
+	fmt.Printf("%v\n", res)
 	db.SetWorld(database, res)
 }
 
@@ -72,7 +83,13 @@ func handleRequests() {
 	mxr.HandleFunc("/", homepage)
 	mxr.HandleFunc("/api", apiSelection)
 	mxr.HandleFunc("/api/v0", v0Docs)
-	mxr.HandleFunc("/api/v0/account", accountInfo)
+	mxr.HandleFunc("/api/v0/status", v0Status)
+	mxr.HandleFunc("/api/v0/users", usersSummary)
+	mxr.HandleFunc("/api/v0/users/{username}", usernameInfo)
+	mxr.HandleFunc("/api/v0/users/{username}/claim", usernameClaim).Methods("POST")
+	secure := mxr.PathPrefix("/api/v0/my").Subrouter()
+	secure.Use(auth.GenerateTokenValidationMiddlewareFunc(udb))
+	secure.HandleFunc("/account", accountInfo).Methods("GET")
 	mxr.HandleFunc("/api/v0/locations", locationsOverview)
 	mxr.HandleFunc("/api/v0/finances", financesOverview)
 	mxr.HandleFunc("/api/v0/rituals", ritualsOverview)
@@ -96,13 +113,74 @@ func v0Docs(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Hit: apidocs")
 }
 
+func v0Status(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "v0Status")
+	fmt.Println("Hit: v0Status")
+}
+
+func usersSummary(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "usersSummary")
+	fmt.Println("Hit: usersSummary")
+}
+
+func usernameInfo(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "usernameInfo")
+	fmt.Println("Hit: usernameInfo")
+}
+
+type usernameClaimResponse struct {
+	Username string
+	Token string
+	Error string
+}
+func usernameClaim(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	username := vars["username"]
+	fmt.Println("Hit: usernameClaim, username: " + username)
+	validationResponse := auth.ValidateUsername(username, udb)
+	if validationResponse == "OK" {
+		token, err := auth.GenerateToken(username)
+		if err != nil {
+			response := fmt.Sprintf("Could not generate token for user. Username %v Error %v", username, err)
+			fmt.Println(response)
+			res := usernameClaimResponse{"", "", response}
+			fmt.Fprintf(w, prettyJSON(res))
+		} else {
+			dbSaveResult := createNewUserInDB(username, token)
+			if dbSaveResult == "OK" {
+				fmt.Println("Generated token and claimed username for " + username)
+				res := usernameClaimResponse{username, token, ""}
+				fmt.Fprintf(w, prettyJSON(res))
+			} else {
+				response := fmt.Sprintf("Could not generate token for user (%v). Error saving to DB, contact Admin. dbSaveResult : %v", username, dbSaveResult)
+				fmt.Println(response)
+				res := usernameClaimResponse{"", "", response}
+				fmt.Fprintf(w, prettyJSON(res))
+			}
+		}
+	} else {
+		response := fmt.Sprintf("Could not generate token for user. ValidationResponse: %v", validationResponse)
+		fmt.Println(response)
+		res := usernameClaimResponse{"", "", response}
+		fmt.Fprintf(w, prettyJSON(res))
+	}
+}
+func createNewUserInDB(username string, token string) string {
+	creationSuccess := db.CreateUser(udb, username, token, 0)
+	return creationSuccess
+}
+
 func accountInfo(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "accountInfo")
-	fmt.Println("Hit accountInfo")
+	if validatedUsername := r.Context().Value("validatedUsername"); validatedUsername != nil {
+		if str, ok := validatedUsername.(string); ok {
+			fmt.Fprintf(w, prettyJSON(db.GetUser(udb, str)))
+		}
+	}
+	// fmt.Println("Hit accountInfo")
 }
 
 func locationsOverview(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "locOverview")
+	fmt.Fprintf(w, prettyJSON(db.GetWorld(wdb, worldName)))
 	fmt.Println("Hit locoverview")
 }
 
@@ -121,13 +199,13 @@ func guildsOverview(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Hit: guildOve")
 } 
 
-// func prettyJSON(input interface{}) string {
-// 	res, err := json.MarshalIndent(input, "", "  ")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return string(res)
-// }
+func prettyJSON(input interface{}) string {
+	res, err := json.MarshalIndent(input, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(res)
+}
 
 // var Drones []drone
 // type drone struct {
@@ -142,15 +220,19 @@ func guildsOverview(w http.ResponseWriter, r *http.Request) {
 // 	fmt.Fprint(w, prettyJSON(Drones))
 // }
 
-// func returnSingleDrone(w http.ResponseWriter, r *http.Request) {
-// 	vars := mux.Vars(r)
-// 	key := vars["id"]
-// 	fmt.Println("Endpoint Hit: returnSingleDrone, key: " + key)
-
-// 	for _, drone := range Drones {
-// 		if drone.Id == key {
-// 			fmt.Fprint(w, prettyJSON(drone))
-// 		}
+// func createNewDrone(w http.ResponseWriter, r *http.Request) {
+// 	fmt.Println("Endpoint Hit: createNewDrone")
+// 	// get the body of the POST request
+// 	// return the string response containing the request body
+// 	reqBody, _ := ioutil.ReadAll(r.Body)
+// 	var newDrone drone
+// 	json.Unmarshal(reqBody, &newDrone)
+// 	index := getStructByFieldValue(Drones, "Id", newDrone.Id)
+// 	if (index != -1) {
+// 		fmt.Fprintf(w, "{\"error\": \"Could not execute CREATE as drone with id %s already exists\"}", newDrone.Id)
+// 	} else {
+// 		Drones = append(Drones, newDrone)
+// 		fmt.Fprint(w, prettyJSON(Drones))
 // 	}
 // }
 
@@ -177,22 +259,6 @@ func guildsOverview(w http.ResponseWriter, r *http.Request) {
 
 // type venusianSurface struct {
 // 	Temperature float64 `json:"Temperature"`
-// }
-
-// func createNewDrone(w http.ResponseWriter, r *http.Request) {
-// 	fmt.Println("Endpoint Hit: createNewDrone")
-// 	// get the body of the POST request
-// 	// return the string response containing the request body
-// 	reqBody, _ := ioutil.ReadAll(r.Body)
-// 	var newDrone drone
-// 	json.Unmarshal(reqBody, &newDrone)
-// 	index := getStructByFieldValue(Drones, "Id", newDrone.Id)
-// 	if (index != -1) {
-// 		fmt.Fprintf(w, "{\"error\": \"Could not execute CREATE as drone with id %s already exists\"}", newDrone.Id)
-// 	} else {
-// 		Drones = append(Drones, newDrone)
-// 		fmt.Fprint(w, prettyJSON(Drones))
-// 	}
 // }
 
 // func deleteDrone(w http.ResponseWriter, r *http.Request) {

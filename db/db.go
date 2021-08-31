@@ -42,34 +42,41 @@ func Bytes(reply interface{}, err error) ([]byte, error) {
 }
 
 //Generic set data function
-func JsonSetData(rh *rejson.Handler, key string, data interface{}) {
+func JsonSetData(rh *rejson.Handler, key string, path string, data interface{}) string {
 	if verbose {
 		log.Printf("New attempt JsonSetData")
-		log.Printf("Key: '%s', Data: '%s'", key, data)
+		log.Printf("Key: '%s', Path: '%s', Data: '%s'", key, path, data)
 	}
-	res, err := rh.JSONSet(key, ".", data)
+	res, err := rh.JSONSet(key, path, data)
 	if err != nil {
-		log.Printf("Failed to JSONSet, reason: '%s'", err.Error())
-		return
+		if verbose {
+			log.Printf("Failed to JSONSet, reason: '%s'", err.Error())
+		}
+		return "JsonSetData: Failed to set: (err != nil): " + err.Error()
 	}
 	if res.(string) == "OK" {
 		if verbose {
 			fmt.Printf("JsonSetData Success: %s\n", res)
 		}
+		return "OK"
 	} else {
 		fmt.Println("JsonSetData Failed to Set: " + res.(string))
+		return "JsonSetData: Failed to set: (res.(string) != 'OK'" + res.(string)
 	}
+	// return "JsonSetData: Uncaught Failure"
 }
 
 //Generic get data function
 //Returns marshalled json so make sure to unmarshall externally
-func JsonGetData(rh *rejson.Handler, key string) []uint8 {
+func JsonGetData(rh *rejson.Handler, key string, path string) []uint8 {
 	if verbose {
-		log.Printf("New attempt JsonGetData. Key: '%s'", key)
+		log.Printf("New attempt JsonGetData. Key: '%s', Path: '%s'", key, path)
 	}
-	dataJSON, err := Bytes(rh.JSONGet(key, "."))
+	dataJSON, err := Bytes(rh.JSONGet(key, path))
 	if err != nil {
-		log.Printf("Failed to JSONGet, reason: '%s'", err.Error())
+		if verbose {
+			log.Printf("Failed to JSONGet, reason: '%s'", err.Error())
+		}
 		return nil
 	}
 	return dataJSON
