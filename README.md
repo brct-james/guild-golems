@@ -16,6 +16,7 @@ Go-based server for a fantasy-themed API game
 - Convert from using username as uuid to using token as uuid (should simplify some sections and makes more sense to me)
 - Improve endpoints for world info
 - - Fix enum not serializing to and from json correctly in economy/ideology
+- - - Is this helpful? https://gist.github.com/lummie/7f5c237a17853c031a57277371528e87
 - - Separate region, locale, poi data
 - - Add locale and poi data to db
 - - Add interactions for POIs
@@ -63,9 +64,11 @@ Listens on port `50242`
 - https://tutorialedge.net/golang/parsing-json-with-golang/
 - https://tutorialedge.net/golang/creating-restful-api-with-golang/
 - https://github.com/joho/godotenv
+- https://github.com/golang-jwt/jwt
 
 ### Design
 
 - https://api.spacetraders.io/
+- https://spacetraders.io/docs/guide
 - (Private) https://docs.google.com/document/d/15d-nC5dpiH19LH1sbWiUOM5Pjgr_Cjop-t_Dmuu2Xtc/edit
 - (Private) https://keep.google.com/u/0/#LIST/1AyAhsCulc79U76hQK60tpjy9RaC5uQ6MdjHDYKDGrn8CsEPV56mWNezvrTPRdGA_cCrc9Q
