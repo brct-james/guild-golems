@@ -43,6 +43,7 @@ Listens on port `50242`
 - Fixed bug with region not correctly loading economy, connected regions, or locales
 - Added `secrets.env` and added it to `.gitignore`
 - Added `db.UpdateWorld`
+- Added `guild-golems` to `.gitignore` - its a binary
 
 ### v0.0.0
 

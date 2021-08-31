@@ -14,5 +14,8 @@
 # Env Secrets
 secrets.env
 
+# Ignore built binary
+guild-golems
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
