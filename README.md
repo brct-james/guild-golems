@@ -6,6 +6,8 @@ Go-based server for a fantasy-themed API game
 
 ## Roadmap / TODO
 
+- Get/Set path arg
+
 ## Build & Run
 
 Build with `go build`, start with `./guild-golems`. Alternatively, `go run main.go`
