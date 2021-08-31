@@ -8,29 +8,53 @@ import (
 	"net/http"
 	"os"
 
-	structs "github.com/brct-james/guild-golems/structs"
+	"github.com/brct-james/guild-golems/db"
 	"github.com/gorilla/mux"
 )
 
 var apiVersion string = "v0"
 
-type World struct {
-	Name string `json:"world_name"`
-	Regions []structs.Region `json:"regions"`
+var (
+	ListenAddr = "localhost:50242"
+	RedisAddr = "localhost:6380"
+)
+
+var dbMap = map[string]int{
+	"users": 0,
+	"world": 1,
 }
 
 func main() {
 	fmt.Println("Guild Golems Rest API Server v0.0.1")
+	fmt.Println("Connecting to Redis DB")
+	// fmt.Println(dbMap["users"])
+	// db.NewDatabase(RedisAddr, 0)
+	udb := db.NewDatabase(RedisAddr, dbMap["users"])
+	db.SetUser(udb, "testUser", "token", 0)
+	db.SetUser(udb, "Greenitthe", "token", 0)
+	db.GetUser(udb, "testUser")
+	db.GetUser(udb, "Greenitthe")
+	wdb := db.NewDatabase(RedisAddr, dbMap["world"])
 	fmt.Println("Loading world json")
-	world := loadJson("./" + apiVersion + "_regions.json")
-	fmt.Println(prettyJSON(world))
-	// TECHNICALLY WORKING BUT NEED TO RETHINK THIS - WORLD IS INTERFACE{} NOT World STRUCT
-	// EITHER DEFINE loadJson DIFFERENTLY OR MAKE MULTIPLE FUNCTIONS I GUESS?
-	fmt.Println("World loaded")
+	saveWorldJson(readJSON("./" + apiVersion + "_regions.json"), wdb)
+	db.GetWorld(wdb, "ipeiros")
 	handleRequests()
 }
 
-func loadJson(path string) interface{} {
+type Test struct {
+	Name string `json:"name"`
+	Coins string `json:"coins"`
+}
+
+func saveWorldJson(jsonBytes []byte, database db.Database) {
+	fmt.Println("Unmarshaling json")
+	var res db.World
+	json.Unmarshal(jsonBytes, &res)
+	fmt.Println("Saving json to DB")
+	db.SetWorld(database, res)
+}
+
+func readJSON(path string) []byte {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		fmt.Println(err)
@@ -39,11 +63,7 @@ func loadJson(path string) interface{} {
 	defer jsonFile.Close()
 	fmt.Println("Reading from file")
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	fmt.Println("Unmarshaling json")
-	var res interface{}
-	json.Unmarshal(byteValue, &res)
-	fmt.Println("End loadJson")
-	return res
+	return byteValue
 }
 
 func handleRequests() {
@@ -101,13 +121,13 @@ func guildsOverview(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Hit: guildOve")
 } 
 
-func prettyJSON(input interface{}) string {
-	res, err := json.MarshalIndent(input, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	return string(res)
-}
+// func prettyJSON(input interface{}) string {
+// 	res, err := json.MarshalIndent(input, "", "  ")
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return string(res)
+// }
 
 // var Drones []drone
 // type drone struct {

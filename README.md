@@ -16,7 +16,7 @@ Listens on port `50242`
 
 Consider best layout for location data: singular json file vs joining files for regions, locales, pois, and entities
 
-/api/v0/locations/astria/<locale>/<poi>
+/api/v0/locations/astria/_locale_/_poi_
 See below for info on locales and pois. v0 only has one region, Astria. Entities are not implemented, instead all functionality is done via the poi itself (e.g. getting quests, conducting rituals, buying and selling). On the backend this information is basically a json lookup until you get to the interaction. Once multiplayer is implemented, will need to be a database lookup as player guild members, guild buildings, etc. will change.
 
 ideology is based on the following axes:
@@ -24,7 +24,7 @@ economic freedom doctrine: Unregulated, Semi-Regulated, Regulated, Semi-Planned,
 social doctrine: Collectivist, Progressive, Centrist, Conservative, Individualist
 state authority doctrine: Anarchic, Libertarian, Moderate, Controlling, Authoritarian
 
-/api/v1/locations/<region>/<locale>/<poi>/<entity>
+/api/v1/locations/_region_/_locale_/_poi_/_entity_
 
 Regions are areas controlled by certain factions, like kingdoms, nations, etc.
 GET: information
