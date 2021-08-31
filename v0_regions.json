@@ -17,9 +17,9 @@
         }
       },
       "economy": {
-        "relative_population": "Moderate",
-        "relative_size": "Large",
-        "relative_wealth": "medium",
+        "relative_population": "Megalopolis",
+        "relative_size": "Medium",
+        "relative_wealth": "Wealthy",
         "region_tax_rate": 0.01
       },
       "connected_regions": [
@@ -44,7 +44,8 @@
           "travel_time": 1000000,
           "route_danger": "Suicidal"
         }
-      ]
+      ],
+      "locales": []
     }
   ]
 }

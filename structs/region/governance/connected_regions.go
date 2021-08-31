@@ -2,7 +2,7 @@ package governance
 
 type ConnectedRegions struct {
 	Symbol string `json:"symbol"`
-	TravelTime int64 `json:"travel_time"`
+	TravelTime int `json:"travel_time"`
 	RouteDanger RouteDanger `json:"route_danger"`
 }
 
