@@ -80,20 +80,24 @@ func readJSON(path string) []byte {
 func handleRequests() {
 	//mux router
 	mxr := mux.NewRouter().StrictSlash(true)
-	mxr.HandleFunc("/", homepage)
-	mxr.HandleFunc("/api", apiSelection)
-	mxr.HandleFunc("/api/v0", v0Docs)
-	mxr.HandleFunc("/api/v0/status", v0Status)
-	mxr.HandleFunc("/api/v0/users", usersSummary)
-	mxr.HandleFunc("/api/v0/users/{username}", usernameInfo)
+	mxr.HandleFunc("/", homepage).Methods("GET")
+	mxr.HandleFunc("/api", apiSelection).Methods("GET")
+	mxr.HandleFunc("/api/v0", v0Docs).Methods("GET")
+	mxr.HandleFunc("/api/v0/status", v0Status).Methods("GET")
+	mxr.HandleFunc("/api/v0/users", usersSummary).Methods("GET")
+	mxr.HandleFunc("/api/v0/users/{username}", usernameInfo).Methods("GET")
 	mxr.HandleFunc("/api/v0/users/{username}/claim", usernameClaim).Methods("POST")
+	mxr.HandleFunc("/api/v0/locations", locationsOverview).Methods("GET")
+	mxr.HandleFunc("/api/v0/finances", financesOverview).Methods("GET")
+	mxr.HandleFunc("/api/v0/rituals", ritualsOverview).Methods("GET")
+	mxr.HandleFunc("/api/v0/guilds", guildsOverview).Methods("GET")
+
+	// secure subrouter for account-specific routes
 	secure := mxr.PathPrefix("/api/v0/my").Subrouter()
 	secure.Use(auth.GenerateTokenValidationMiddlewareFunc(udb))
 	secure.HandleFunc("/account", accountInfo).Methods("GET")
-	mxr.HandleFunc("/api/v0/locations", locationsOverview)
-	mxr.HandleFunc("/api/v0/finances", financesOverview)
-	mxr.HandleFunc("/api/v0/rituals", ritualsOverview)
-	mxr.HandleFunc("/api/v0/guilds", guildsOverview)
+
+	// Start listening
 	fmt.Println("Listening on :50242")
 	log.Fatal(http.ListenAndServe(":50242", mxr))
 }
