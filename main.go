@@ -1,13 +1,14 @@
 package main
 
 import (
+	"github.com/brct-james/brct-game/auth"
 	"github.com/brct-james/brct-game/log"
 	"github.com/brct-james/brct-game/rdb"
 )
 
 // Configuration
 
-var wipeDatabases bool = true
+var resetDatabases bool = true
 var refreshAuthSecret bool = true
 
 // Define relationship between string database name and redis db num
@@ -33,13 +34,26 @@ func main() {
 	
 	userDatabase = rdb.NewDatabase(RedisAddr, dbMap["users"])
 
-	if wipeDatabases {
-		log.Important.Printf("Wiping Databases")
+	if resetDatabases {
+		log.Important.Printf("Flushing All Databases")
 		userDatabase.Flush()
+		// TODO: Reinitialize world db
 	}
 
 	if refreshAuthSecret {
-		log.Important.Printf("Refreshing Auth Secret")
-		// Should this forcibly reset the user database? Almost certainly
+		log.Important.Printf("(Re)Generating Auth Secret")
+		auth.CreateOrUpdateAuthSecretInFile()
+		log.Important.Printf("Flushing User Database")
+		userDatabase.Flush()
 	}
+
+	log.Info.Println("Loading secrets from envfile")
+	auth.LoadSecretsToEnv()
+
+	// Handle loading json to db
+	log.Info.Println("Loading world json")
+	// saveWorldJson(readJSON("./" + apiVersion + "_regions.json"), wdb)
+	
+	// Begin serving
+	// handleRequests()
 }

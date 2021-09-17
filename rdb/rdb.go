@@ -48,7 +48,7 @@ func (db Database) SetJsonData(key string, path string, data interface{}) error 
 	// Attempt jsonset for key and path with data
 	res, err := db.Rejson.JSONSet(key, path, data)
 	if err != nil {
-		log.Error.Printf("Failed to JSONSet (key: %s, path: %s), error: '%s'. Data:\n%s", key, path, err, data)
+		log.Error.Printf("Failed to JSONSet (key: %s, path: %s), error: '%v'. Data:\n%s", key, path, err, data)
 		return err
 	}
 	if res.(string) == "OK" {
@@ -70,7 +70,7 @@ func (db Database) GetJsonData(key string, path string) ([]uint8, error) {
 	// return bytevalue of jsonget for path at key
 	dataJSON, err := Bytes(db.Rejson.JSONGet(key, path))
 	if err != nil {
-		log.Debug.Printf("Failed to JSONGet (key: %s, path: %s), reason: '%s'", key, path, err)
+		log.Debug.Printf("Failed to JSONGet (key: %s, path: %s), reason: '%v'", key, path, err)
 		return nil, err
 	}
 	return dataJSON, nil
@@ -80,7 +80,7 @@ func (db Database) GetJsonData(key string, path string) ([]uint8, error) {
 func (db Database) Flush() error {
 	if err := db.Goredis.FlushDB(context.Background()).Err(); err != nil {
 		// Uses Fatal as any time you would want to flush the db it is mission-critical
-		log.Error.Fatalf("go-redis failed to flush: %s", err)
+		log.Error.Fatalf("go-redis failed to flush: %v", err)
 		return err
 	} else {
 		// Get DBnum

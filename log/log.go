@@ -19,7 +19,7 @@ func init() {
 	var debugFile, logErr = os.Create(logpath)
 
 	if logErr != nil {
-		panic(logErr)
+		log.Fatalf("%v", logErr)
 	}
 	defer debugFile.Close()
 
