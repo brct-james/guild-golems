@@ -1,94 +1,34 @@
 package auth
 
-import (
-	// 	"context"
-	// 	"fmt"
-	// 	"net/http"
-	"os"
-	// 	"regexp"
-	"crypto/rand"
-	"math/big"
+// import (
+// 	"context"
+// 	"fmt"
+// 	"net/http"
+// "os"
+// 	"regexp"
+// "crypto/rand"
+// "math/big"
 
-	// 	"github.com/brct-james/brct-game/db"
-	"github.com/brct-james/brct-game/filemngr"
-	"github.com/brct-james/brct-game/log"
+// 	"github.com/brct-james/brct-game/db"
+// "github.com/brct-james/brct-game/filemngr"
+// "github.com/brct-james/brct-game/log"
 
-	// 	responses "github.com/brct-james/brct-game/responses"
-	// 	"github.com/golang-jwt/jwt"
-	"github.com/joho/godotenv"
-)
+// 	responses "github.com/brct-james/brct-game/responses"
+// 	"github.com/golang-jwt/jwt"
+// "github.com/joho/godotenv"
+// )
 
-// Creates or updates the GG_ACCESS_SECRET value in secrets.env
-func CreateOrUpdateAuthSecretInFile() {
-	// Ensure exists
-	filemngr.Touch("secrets.env")
-	// Read file to lines array splitting by newline
-	lines, readErr := filemngr.ReadFileToLineSlice("secrets.env")
-	if readErr != nil {
-		// Auth is mission-critical, using Fatal
-		log.Error.Fatalf("Could not read lines from secrets.env. Err: %v", readErr)
-	}
-
-	// Securely generate new 64 character secret
-	newSecret, generationErr := GenerateRandomSecureString(64)
-	if generationErr != nil {
-		log.Error.Fatalf("Could not generate secure string: %v", generationErr)
-	}
-	secretString :=  "GG_ACCESS_SECRET=" + string(newSecret)
-	log.Debug.Printf("New Secret Generated: %s", secretString)
-	
-	// Search existing file for secret identifier
-	found, i := filemngr.KeyInSliceOfLines("GG_ACCESS_SECRET=", lines)
-	if found {
-		// Update existing secret
-		lines [i] = secretString
-	} else {
-		// Create secret in env file since could not find one to update
-		// If empty file then replace 1st line else append to end
-		log.Debug.Printf("Creating new secret in env file. secrets.env[0] == ''? %v", lines[0] == "")
-		if lines[0] == "" {
-			log.Debug.Printf("Blank secrets.env, replacing line 0")
-			lines[0] = secretString
-		} else {
-			log.Debug.Printf("Not blank secrets.env, appending to end")
-			lines = append(lines, secretString)
-		}
-	}
-	
-	// Join and write out
-	writeErr := filemngr.WriteLinesToFile("secrets.env", lines)
-	if writeErr != nil {
-		log.Error.Fatalf("Could not write secrets.net: %v", writeErr)
-	}
-	log.Info.Println("Wrote auth secret to secrets.env")
+// Defines struct for passing around Token-Username pairs
+type ValidationPair struct{
+	Username string
+	Token string
 }
 
-// Generate random string of n characters
-func GenerateRandomSecureString(n int) (string, error) {
-	const allowed = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
-	ret := make([]byte, n)
-	for i := 0; i < n; i++ {
-		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(allowed))))
-		if err != nil {
-			return "", err
-		}
-		ret[i] = allowed[num.Int64()]
-	}
-	return string(ret), nil
-}
-
-
-// Load secrets.env file to environment
-func LoadSecretsToEnv() {
-	godotenvErr := godotenv.Load("secrets.env")
-	if godotenvErr != nil {
-		// Loading secrets is mission-critical, fatal
-		log.Error.Fatalf("Error loading secrets.env file. %v", godotenvErr)
-	} else {
-		log.Info.Println("Loaded secrets.env file successfully")
-		log.Debug.Printf("GG_ACCESS_SECRET: %s", os.Getenv("GG_ACCESS_SECRET"))
-	}
-}
+// // enum for ValidationContext
+// type ValidationResponseKey int
+// const (
+// 	ValidationContext ValidationResponseKey = iota
+// )
 
 // // Used by UsernameClaim handler to validate username meets spec before attempting user creation
 // func ValidateUsernameAndGenerateToken (username string, userDB db.Database) (token *string, usernameValidationStatus string, genTokenErr error) {
@@ -201,7 +141,7 @@ func LoadSecretsToEnv() {
 // 			Username: username,
 // 		}, nil
 //   }
-// 	// Fail state, token invalid and/or error 
+// 	// Fail state, token invalid and/or error
 //   return nil, fmt.Errorf("token invalid or token.Claims != jwt.MapClaims")
 // }
 
@@ -230,25 +170,13 @@ func LoadSecretsToEnv() {
 // 	}
 // 	// Check against database for existing user
 // 	if dbusername, dbtoken, ok := AuthenticateWithDatabase(tokenAuth, userDB); ok {
-// 		// Success state, found user and matches 
+// 		// Success state, found user and matches
 // 		return dbusername, dbtoken, true
 // 	} else {
-// 		// Fail state, did not find user 
+// 		// Fail state, did not find user
 // 		return nil, nil, false
 // 	}
 // }
-
-// // Defines struct for passing around Token-Username pairs
-// type ValidationPair struct{
-// 	Username string
-// 	Token string
-// }
-
-// // enum for ValidationContext
-// type ValidationResponseKey int
-// const (
-// 	ValidationContext ValidationResponseKey = iota
-// )
 
 // // Generates a middleware function for handling token validation on secure routes
 // func GenerateTokenValidationMiddlewareFunc(userDB db.Database) func(http.Handler) http.Handler {
