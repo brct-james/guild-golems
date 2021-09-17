@@ -1,13 +1,20 @@
 package main
 
 import (
-	"github.com/brct-james/brct-io-game/log"
+	"github.com/brct-james/brct-game/log"
+	"github.com/brct-james/brct-game/rdb"
 )
 
 // Configuration
 
 var wipeDatabases bool = true
 var refreshAuthSecret bool = true
+
+// Define relationship between string database name and redis db num
+var dbMap = map[string]int{
+	"users": 0,
+	"world": 1,
+}
 
 // Global Vars
 
@@ -17,7 +24,22 @@ var (
 	RedisAddr = "localhost:6381"
 )
 
-//Main
+var userDatabase rdb.Database
+
+// Main
 func main() {
-	log.Info.Println("Brct-Game Rest API Server ", apiVersion)
+	log.Info.Printf("Brct-Game Rest API Server %s", apiVersion)
+	log.Info.Printf("Connecting to Redis DB")
+	
+	userDatabase = rdb.NewDatabase(RedisAddr, dbMap["users"])
+
+	if wipeDatabases {
+		log.Important.Printf("Wiping Databases")
+		userDatabase.Flush()
+	}
+
+	if refreshAuthSecret {
+		log.Important.Printf("Refreshing Auth Secret")
+		// Should this forcibly reset the user database? Almost certainly
+	}
 }
