@@ -2,20 +2,20 @@ package auth
 
 // import (
 // 	"context"
+// 	"crypto/rand"
 // 	"fmt"
+// 	"io/ioutil"
+// 	"math/big"
 // 	"net/http"
-// "os"
+// 	"os"
 // 	"regexp"
-// "crypto/rand"
-// "math/big"
+// 	"strings"
 
-// 	"github.com/brct-james/brct-game/db"
-// "github.com/brct-james/brct-game/filemngr"
-// "github.com/brct-james/brct-game/log"
-
-// 	responses "github.com/brct-james/brct-game/responses"
+// 	"github.com/brct-james/guild-golems/db"
+// 	"github.com/brct-james/guild-golems/log"
+// 	responses "github.com/brct-james/guild-golems/responses"
 // 	"github.com/golang-jwt/jwt"
-// "github.com/joho/godotenv"
+// 	"github.com/joho/godotenv"
 // )
 
 // Defines struct for passing around Token-Username pairs

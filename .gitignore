@@ -17,8 +17,8 @@ secrets.env
 # Ignore built binary
 brct-game
 
-# Debug Log
-debug.log
+# Debug Log (ansi format)
+debug.ansi
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

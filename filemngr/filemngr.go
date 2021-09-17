@@ -51,3 +51,16 @@ func WriteLinesToFile(filePath string, lines []string) error {
 	}
 	return nil
 }
+
+// Reads JSON from specified file, returns bytevalue
+func ReadJSON(path string) []byte {
+	jsonFile, err := os.Open(path)
+	if err != nil {
+		log.Error.Fatalln(err)
+	}
+	log.Info.Println("Successfully opened " + path)
+	defer jsonFile.Close()
+	log.Info.Println("Reading from file")
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	return byteValue
+}
