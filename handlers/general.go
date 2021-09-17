@@ -2,11 +2,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/brct-james/brct-game/log"
-	// "github.com/brct-james/brct-game/responses"
+	"github.com/brct-james/brct-game/rdb"
+	"github.com/brct-james/brct-game/responses"
+	"github.com/brct-james/brct-game/schema"
 )
 
 // Handler function for the route: /
@@ -115,3 +118,28 @@ type UsernameClaimResponse struct {
 // 	creationSuccess := db.CreateUser(udb, username, token, 0)
 // 	return creationSuccess
 // }
+
+// Handler function for the route: /api/v0/locations
+func LocationsOverview(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- locationsOverview -- "))
+	log.Debug.Println("Recover wdb from context")
+	// Get wdb context
+	if wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database); ok {
+		// Output world info to page
+		bytes, err := wdb.GetJsonData("world", ".")
+		if err != nil {
+			log.Error.Printf("Could not get world from DB! Err: %v", err)
+			// TODO: This should output failure state once migrated to Responses
+		}
+		worldData := schema.World{}
+		err = json.Unmarshal(bytes, &worldData)
+		if err != nil {
+			log.Error.Fatalf("Could not unmarshal world json from DB: %v", err)
+		}
+		fmt.Fprint(w, responses.JSON(worldData))
+	} else {
+		log.Error.Printf("Could not get WorldDBContext in LocationsOverview")
+		// TODO: This should output failure state once migrated to Responses
+	}
+	log.Debug.Println(log.Cyan("-- End locationsOverview -- "))
+}

@@ -3,13 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 
 	"github.com/brct-james/brct-game/auth"
 	"github.com/brct-james/brct-game/filemngr"
+	"github.com/brct-james/brct-game/handlers"
 	"github.com/brct-james/brct-game/log"
 	"github.com/brct-james/brct-game/rdb"
 	"github.com/brct-james/brct-game/schema"
+	"github.com/gorilla/mux"
 )
 
 // Configuration
@@ -29,7 +32,7 @@ var dbMap = map[string]int{
 
 var apiVersion string = "v0.0.1"
 var (
-	ListenAddr = "localhost:50235"
+	ListenPort = ":50235"
 	RedisAddr = "localhost:6381"
 )
 
@@ -62,7 +65,7 @@ func main() {
 	auth.LoadSecretsToEnv()
 
 	// Begin serving
-	// handleRequests()
+	handleRequests()
 }
 
 // Load world file from json and save it to world database
@@ -87,36 +90,37 @@ func initializeWorldDB(wdb rdb.Database) {
 		log.Error.Fatalf("Could not read world from DB: %v", err)
 	}
 
-	readData := schema.World{}
-	err = json.Unmarshal(bytes, &readData)
+	worldData := schema.World{}
+	err = json.Unmarshal(bytes, &worldData)
 	if err != nil {
 		log.Error.Fatalf("Could not unmarshal world json from DB: %v", err)
 	}
-	success := fmt.Sprintf("%v", reflect.DeepEqual(readData, res))
+	success := fmt.Sprintf("%v", reflect.DeepEqual(worldData, res))
 	log.Test.Printf("DOES WORLD IN DB DEEPEQUAL WORLD FROM JSON? %s", log.TestOutput(success, "true"))
 	if success != "true" {
 		panic("FAILED TEST WHILE INITIALIZING WORLD DB, LOADED JSON NOT MATCH DATABASE")
 	}
 }
 
-// func handleRequests() {
-// 	//mux router
-// 	mxr := mux.NewRouter().StrictSlash(true)
-// 	mxr.Use(handlers.GenerateHandlerMiddlewareFunc(udb,wdb,worldName))
-// 	mxr.HandleFunc("/", handlers.Homepage).Methods("GET")
-// 	mxr.HandleFunc("/api", handlers.ApiSelection).Methods("GET")
-// 	mxr.HandleFunc("/api/v0", handlers.V0Docs).Methods("GET")
-// 	mxr.HandleFunc("/api/v0/status", handlers.V0Status).Methods("GET")
-// 	mxr.HandleFunc("/api/v0/users", handlers.UsersSummary).Methods("GET")
-// 	mxr.HandleFunc("/api/v0/users/{username}", handlers.UsernameInfo).Methods("GET")
-// 	mxr.HandleFunc("/api/v0/users/{username}/claim", handlers.UsernameClaim).Methods("POST")
+func handleRequests() {
+	//mux router
+	mxr := mux.NewRouter().StrictSlash(true)
+	mxr.Use(handlers.GenerateHandlerMiddlewareFunc(userDatabase,worldDatabase))
+	mxr.HandleFunc("/", handlers.Homepage).Methods("GET")
+	mxr.HandleFunc("/api", handlers.ApiSelection).Methods("GET")
+	mxr.HandleFunc("/api/v0", handlers.V0Docs).Methods("GET")
+	mxr.HandleFunc("/api/v0/status", handlers.V0Status).Methods("GET")
+	mxr.HandleFunc("/api/v0/users", handlers.UsersSummary).Methods("GET")
+	mxr.HandleFunc("/api/v0/users/{username}", handlers.UsernameInfo).Methods("GET")
+	// mxr.HandleFunc("/api/v0/users/{username}/claim", handlers.UsernameClaim).Methods("POST")
+	mxr.HandleFunc("/api/v0/locations", handlers.LocationsOverview).Methods("GET")
 
-// 	// secure subrouter for account-specific routes
-// 	secure := mxr.PathPrefix("/api/v0/my").Subrouter()
-// 	secure.Use(auth.GenerateTokenValidationMiddlewareFunc(udb))
-// 	secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
+	// secure subrouter for account-specific routes
+	// secure := mxr.PathPrefix("/api/v0/my").Subrouter()
+	// secure.Use(auth.GenerateTokenValidationMiddlewareFunc(userDatabase))
+	// secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
 
-// 	// Start listening
-// 	log.Info.Println("Listening on :50242")
-// 	log.Error.Fatal(http.ListenAndServe(":50242", mxr))
-// }
+	// Start listening
+	log.Info.Printf("Listening on %s", ListenPort)
+	log.Error.Fatal(http.ListenAndServe(ListenPort, mxr))
+}

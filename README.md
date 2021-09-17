@@ -6,10 +6,21 @@ Go-based server for a fantasy-themed alchemy game
 
 - Nothing
 
+### Endpoints
+
+- `GET: api/v0/locations` returns entire world json from DB
+
 ## Roadmap / TODO
 
 - [In-Progress] Port progress from guild-golems following idioms
-- Make auth secret automatically generate if doesn't exist.
+- - Working on restoring the following:
+- - - auth/token-validation
+- - - handlers/general
+- - - - Refactor locationsOverview in particular - its uncommented and updated but not been streamlined nor made to conform to idioms
+- - - handlers/secure
+- - - rdb (specifically, how handling user vs world CRUD - do I want/need wrappers for this?)
+- - - responses/responses
+- Make auth secret automatically generate if doesn't exist rather than relying on a variable
 
 ## Build & Run
 
@@ -31,7 +42,10 @@ Recommend running with screen `screen -S gg`. If get detached, can forcibly deta
 
 ### v0.0.1
 
--
+- Added user db, world db
+- - World db can be loaded from json
+- Automatically generates access secret
+- Added `GET: /api/v0/locations`
 
 ### v0.0.0
 
