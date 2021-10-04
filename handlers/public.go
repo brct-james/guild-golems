@@ -94,11 +94,17 @@ func UsernameInfo(w http.ResponseWriter, r *http.Request) {
 		responses.SendRes(w, responses.Generate_Token_Failure, nil, genErrorMsg)
 		return
 	}
-	userData, getError := schema.GetUserFromDB(token, udb)
+	userData, userFound, getError := schema.GetUserFromDB(token, udb)
 	if getError != nil {
 		// fail state
 		getErrorMsg := fmt.Sprintf("in UsernameInfo, could not get from DB for username: %s, error: %v", username, getError)
 		responses.SendRes(w, responses.UDB_Get_Failure, nil, getErrorMsg)
+		return
+	}
+	if !userFound {
+		// fail state - user not found
+		userNotFoundMsg := fmt.Sprintf("in UsernameInfo, no user found in DB with username: %s", username)
+		responses.SendRes(w, responses.User_Not_Found, nil, userNotFoundMsg)
 		return
 	}
 	// success state

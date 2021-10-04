@@ -1,10 +1,18 @@
 package auth
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/brct-james/brct-game/log"
+	"github.com/brct-james/brct-game/rdb"
+	"github.com/brct-james/brct-game/responses"
+	"github.com/brct-james/brct-game/schema"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -26,17 +34,7 @@ import (
 // 	"github.com/joho/godotenv"
 // )
 
-// Defines struct for passing around Token-Username pairs
-type ValidationPair struct{
-	Username string
-	Token string
-}
-
-// // enum for ValidationContext
-// type ValidationResponseKey int
-// const (
-// 	ValidationContext ValidationResponseKey = iota
-// )
+// GENERATE & VALIDATE TOKENS
 
 // validate that username meets spec
 func ValidateUsername (username string) string {
@@ -70,139 +68,148 @@ func GenerateToken(username string) (string, error) {
 	return token, nil
 }
 
-// // Extract Token from request header
-// func ExtractToken(r *http.Request) (token *string, ok bool) {
-// 	bearerToken := r.Header.Get("Authorization")
-// 	strArr := strings.Split(bearerToken, " ")
-// 	if len(strArr) == 2 {
-// 		return &strArr[1], true
-// 	}
-// 	return nil, false
-// }
+// HANDLE TOKEN VALIDATION FOR SECURE ROUTES
 
-// // Extract token from header then parse and ensure confirms to signing method, if so return decoded token
-// func VerifyTokenFormatAndDecode(r *http.Request) (*jwt.Token, error) {
-// 	if tokenString, ok := ExtractToken(r); ok {
-// 		if verbose {
-// 			log.Verbose.Printf("Token string: %s", *tokenString)
-// 		}
-// 		token, err := jwt.Parse(*tokenString, func(token *jwt.Token) (interface{}, error) {
-// 			//Make sure the token method conforms to SigningMethodHMAC
-// 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-// 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-// 			}
-// 			// return gg_access_secret to parser for decoding
-// 			return []byte(os.Getenv("GG_ACCESS_SECRET")), nil
-// 		})
-// 		// Pass parse errors through to calling funcs
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		// Return decoded token
-// 		return token, nil
-// 	} else {
-// 		// Report failure to extract token
-// 		return nil, fmt.Errorf("token extraction from header failed")
-// 	}
-// }
+// Defines struct for passing around Token-Username pairs
+type ValidationPair struct{
+	Username string
+	Token string
+}
 
-// // Verify token format and decode, then extract metadata (e.g. username) and return
-// func ExtractTokenMetadata(r *http.Request) (*ValidationPair, error) {
-// 	// Verify format and decode
-// 	token, err := VerifyTokenFormatAndDecode(r)
-// 	if verbose {
-// 		log.Verbose.Printf("ExtractTokenMetadata:\nToken:\n%v\nError:\n%v\n", responses.JSON(token), err)
-// 	}
-//   if err != nil {
-//      return nil, err
-//   }
-// 	// ensure token.Claims is jwt.MapClaims
-//   claims, ok := token.Claims.(jwt.MapClaims)
-// 	if verbose {
-// 		log.Verbose.Printf("claims %v ok %v\n", claims, ok)
-// 		log.Verbose.Printf("token.Valid %v\n", token.Valid)
-// 	}
-// 	// If token valid
-//   if ok && token.Valid {
-// 		username := fmt.Sprintf("%s", claims["username"])
-// 		if verbose {
-// 			log.Verbose.Printf("username %v\n", username)
-// 		}
-// 		// Return token and extracted username
-// 		return &ValidationPair{
-// 			Token: token.Raw,
-// 			Username: username,
-// 		}, nil
-//   }
-// 	// Fail state, token invalid and/or error
-//   return nil, fmt.Errorf("token invalid or token.Claims != jwt.MapClaims")
-// }
+// enum for ValidationContext
+type ValidationResponseKey int
+const (
+	ValidationContext ValidationResponseKey = iota
+)
 
-// // Verify that claimed authentication details are stored in database, if so return stored username, token, and ok=true
-// func AuthenticateWithDatabase(authD *ValidationPair, userDB db.Database) (username *string, token *string, ok bool) {
-// 	// Get user with claimed token
-// 	if dbuser, ok := db.GetUser(userDB, authD.Token); ok {
-// 		if verbose {
-// 			log.Verbose.Printf("AuthenticateWithDatabase, Username: %v, Token: %v\n", dbuser.Username, dbuser.Token)
-// 		}
-// 		return &dbuser.Username, &dbuser.Token, true
-// 	} else {
-// 		return nil, nil, false
-// 	}
-// }
+// Extract Token from request header
+func ExtractToken(r *http.Request) (token string, ok bool) {
+	bearerToken := r.Header.Get("Authorization")
+	strArr := strings.Split(bearerToken, " ")
+	if len(strArr) == 2 {
+		return strArr[1], true
+	}
+	return "", false
+}
 
-// // Extract token metadata and check claimed token against database
-// func ValidateUserToken(r *http.Request, userDB db.Database) (username *string, token *string, ok bool) {
-// 	// Extract metadata & validate
-// 	tokenAuth, err := ExtractTokenMetadata(r)
-// 	if verbose {
-// 		log.Verbose.Printf("ValidateUserToken:\nTokenAuth:\n%v\nError:\n%v\n", responses.JSON(tokenAuth), err)
-// 	}
-// 	if err != nil {
-// 		return nil, nil, false
-// 	}
-// 	// Check against database for existing user
-// 	if dbusername, dbtoken, ok := AuthenticateWithDatabase(tokenAuth, userDB); ok {
-// 		// Success state, found user and matches
-// 		return dbusername, dbtoken, true
-// 	} else {
-// 		// Fail state, did not find user
-// 		return nil, nil, false
-// 	}
-// }
+// Extract token from header then parse and ensure confirms to signing method, if so return decoded token
+func VerifyTokenFormatAndDecode(r *http.Request) (jwt.Token, error) {
+	tokenString, ok := ExtractToken(r)
+	if !ok {
+		// Report failure to extract token
+		return jwt.Token{}, fmt.Errorf("token extraction from header failed")
+	}
+	log.Debug.Printf("Token string: %s", tokenString)
+	// Function for parsing token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		//Make sure the token method conforms to SigningMethodHMAC
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		// return gg_access_secret to parser for decoding
+		return []byte(os.Getenv("GG_ACCESS_SECRET")), nil
+	})
+	// Pass parse errors through to calling funcs
+	if err != nil {
+		return jwt.Token{}, err
+	}
+	// Return decoded token
+	return *token, nil
+}
 
-// // Generates a middleware function for handling token validation on secure routes
-// func GenerateTokenValidationMiddlewareFunc(userDB db.Database) func(http.Handler) http.Handler {
-// 	return func(next http.Handler) http.Handler {
-// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 			if verbose {
-// 				log.Verbose.Println(log.Yellow("-- GenerateTokenValidationMiddlewareFunc --"))
-// 			}
-// 			// Validate bearer token
-// 			username, token, ok := ValidateUserToken(r, userDB)
-// 			if ok {
-// 				// Create validation pair
-// 				validationPair := ValidationPair{
-// 					Username: *username,
-// 					Token: *token,
-// 				}
-// 				if verbose {
-// 					log.Verbose.Printf("validationPair:\n%v", responses.JSON(validationPair))
-// 				}
-// 				// Utilize context package to pass validation pair to secure routes from the middleware
-// 				ctx := r.Context()
-// 				ctx = context.WithValue(ctx, ValidationContext, validationPair)
-// 				r = r.WithContext(ctx)
-// 				// Continue serving route
-// 				next.ServeHTTP(w,r)
-// 			} else {
-// 				// Failed to validate, return failure message
-// 				w.WriteHeader(http.StatusUnauthorized)
-// 				fmt.Fprint(w, responses.FormatResponse(responses.Auth_Failure, new(interface{}), ""))
-// 			}
-// 			if verbose {
-// 				log.Verbose.Println(log.Cyan("-- End GenerateTokenValidationMiddlewareFunc --"))
-// 			}
-// 		})
-// 	}
-// }
+// Verify token format and decode, then extract metadata (e.g. username) and return
+func ExtractTokenMetadata(r *http.Request) (ValidationPair, error) {
+	// Verify format and decode
+	token, err := VerifyTokenFormatAndDecode(r)
+	log.Debug.Printf("ExtractTokenMetadata:\nToken:\n%v\nError:\n%v\n", responses.JSON(token), err)
+  if err != nil {
+     return ValidationPair{}, err
+  }
+	// ensure token.Claims is jwt.MapClaims
+  claims, ok := token.Claims.(jwt.MapClaims)
+	log.Debug.Printf("claims %v ok %v\n", claims, ok)
+	log.Debug.Printf("token.Valid %v\n", token.Valid)
+	if !ok || !token.Valid {
+		// Fail state, token invalid and/or error
+		return ValidationPair{}, fmt.Errorf("token invalid or token.Claims != jwt.MapClaims")
+	}
+	// Success state
+	username := fmt.Sprintf("%s", claims["username"])
+	log.Debug.Printf("username %v\n", username)
+	// Return token and extracted username
+	return ValidationPair{
+		Token: token.Raw,
+		Username: username,
+	}, nil
+}
+
+// Verify that claimed authentication details are stored in database, if so return stored username, token, and ok=true
+func AuthenticateWithDatabase(authD ValidationPair, userDB rdb.Database) (username string, token string, err error) {
+	// Get user with claimed token
+	dbuser, userFound, getUserErr := schema.GetUserFromDB(authD.Token, userDB)
+	if getUserErr != nil {
+		return "", "", getUserErr
+	}
+	if getUserErr != nil {
+		// fail state
+		getErrorMsg := fmt.Sprintf("in AuthenticateWithDatabase, could not get from DB for username: %s, token: %s, error: %v", authD.Username, authD.Token, getUserErr)
+		log.Important.Println(getErrorMsg)
+		return "", "", errors.New(getErrorMsg)
+	}
+	if !userFound {
+		// fail state - user not found
+		userNotFoundMsg := fmt.Sprintf("in AuthenticateWithDatabase, no user found in DB with username: %s, token: %s", authD.Username, authD.Token)
+		log.Debug.Println(userNotFoundMsg)
+		return "", "", errors.New("user not found")
+	}
+	log.Debug.Printf("AuthenticateWithDatabase, successfully got Username: %v, Token: %v\n", dbuser.Username, dbuser.Token)
+	return dbuser.Username, dbuser.Token, nil
+}
+
+// Extract token metadata and check claimed token against database
+func ValidateUserToken(r *http.Request, userDB rdb.Database) (username string, token string, err error) {
+	// Extract metadata & validate
+	tokenAuth, err := ExtractTokenMetadata(r)
+	log.Debug.Printf("ValidateUserToken:\nTokenAuth:\n%v\nError:\n%v\n", responses.JSON(tokenAuth), err)
+	if err != nil {
+		return "", "", err
+	}
+	// Check against database for existing user
+	dbusername, dbtoken, dbAuthErr := AuthenticateWithDatabase(tokenAuth, userDB)
+	if dbAuthErr != nil {
+		// Fail state, did not find user or could not get
+		return "", "", dbAuthErr
+	}
+	// Success state, found user and matches
+	return dbusername, dbtoken, nil
+}
+
+// Generates a middleware function for handling token validation on secure routes
+func GenerateTokenValidationMiddlewareFunc(userDB rdb.Database) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Debug.Println(log.Yellow("-- GenerateTokenValidationMiddlewareFunc --"))
+			// Validate bearer token
+			username, token, validateTokenErr := ValidateUserToken(r, userDB)
+			if validateTokenErr != nil {
+				// Failed to validate, return failure message
+				w.WriteHeader(http.StatusUnauthorized)
+				responses.SendRes(w, responses.Auth_Failure, nil, "")
+				return
+			}
+			// Create validation pair
+			validationPair := ValidationPair{
+				Username: username,
+				Token: token,
+			}
+			log.Debug.Printf("validationPair:\n%v", responses.JSON(validationPair))
+			// Utilize context package to pass validation pair to secure routes from the middleware
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, ValidationContext, validationPair)
+			r = r.WithContext(ctx)
+			// Continue serving route
+			next.ServeHTTP(w,r)
+			log.Debug.Println(log.Cyan("-- End GenerateTokenValidationMiddlewareFunc --"))
+		})
+	}
+}

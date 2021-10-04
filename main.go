@@ -19,7 +19,7 @@ import (
 
 var reloadWorldFromJSON bool = false
 var refreshAuthSecret bool = false
-var flushUDB bool = true
+var flushUDB bool = false
 
 var worldJSONPath string = "./v0_world.json"
 
@@ -120,9 +120,9 @@ func handleRequests() {
 	mxr.HandleFunc("/api/v0/locations", handlers.LocationsOverview).Methods("GET")
 
 	// secure subrouter for account-specific routes
-	// secure := mxr.PathPrefix("/api/v0/my").Subrouter()
-	// secure.Use(auth.GenerateTokenValidationMiddlewareFunc(userDatabase))
-	// secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
+	secure := mxr.PathPrefix("/api/v0/my").Subrouter()
+	secure.Use(auth.GenerateTokenValidationMiddlewareFunc(userDatabase))
+	secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
 
 	// Start listening
 	log.Info.Printf("Listening on %s", ListenPort)

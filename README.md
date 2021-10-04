@@ -14,10 +14,7 @@ Go-based server for a fantasy-themed alchemy game
 
 ### In-Progress
 
-- Port progress from guild-golems following idioms
-- - Working on restoring the following:
-- - - auth/token-validation
-- - - handlers/secure
+- Nothing
 
 ### Planned: Next Update
 
@@ -61,6 +58,11 @@ Recommend running with screen `screen -S brct-game`. If get detached, can forcib
 - Added user schema
 - - user.go defines not only the `User` struct but also the `PublicUserInfo` struct as well as `NewUser()`, `CheckForExistingUser()`, and `GetUserFromDB()` funcs
 - - - I decided to put these in the schema files for now, as that makes the most sense IMO - rdb is just for interacting with the DB, it shouldn't have anything to do with the data
+- Renamed handlers/general to handlers/public
+- Refactored handlers/secure
+- Refactored auth/token-validation
+- Added `GET: /api/v0/my/account`
+- - Requires bearer token authorization header, provides full user info
 
 ### v0.0.0
 

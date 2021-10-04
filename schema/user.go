@@ -53,24 +53,24 @@ func CheckForExistingUser (token string, udb rdb.Database) (bool, error) {
 	return true, nil
 }
 
-// Get user from DB
-func GetUserFromDB (token string, udb rdb.Database) (User, error) {
+// Get user from DB, bool is user found
+func GetUserFromDB (token string, udb rdb.Database) (User, bool, error) {
 	// Get user json
 	uJson, getError := udb.GetJsonData(token, ".")
 	if getError != nil {
 		if fmt.Sprint(getError) != "redis: nil" {
 			// user not found
-			return User{}, nil
+			return User{}, false, nil
 		}
 		// error
-		return User{}, getError
+		return User{}, false, getError
 	}
 	// Got successfully, unmarshal
 	uData := User{}
 	unmarshalErr := json.Unmarshal(uJson, &uData)
 	if unmarshalErr != nil {
 		log.Error.Fatalf("Could not unmarshal user json from DB: %v", unmarshalErr)
-		return User{}, unmarshalErr
+		return User{}, false, unmarshalErr
 	}
-	return uData, nil
+	return uData, true, nil
 }

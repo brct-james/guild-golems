@@ -30,6 +30,8 @@ const (
 	JSON_Unmarshal_Error ResponseCode = 8
 	No_WDB_Context ResponseCode = 9
 	No_UDB_Context ResponseCode = 10
+	No_AuthPair_Context ResponseCode = 11
+	User_Not_Found ResponseCode = 12
 )
 
 // Defines Response structure for output
@@ -53,7 +55,7 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) s
 	case 2:
 		message = "Token was invalid or missing from request. Did you confirm sending the token as an authorization header?"
 	case 3:
-		message = "Could not claim username, failed validation!"
+		message = "Username failed validation!"
 	case 4:
 		message = "Failed to save to DB"
 	case 5:
@@ -68,6 +70,10 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) s
 		message = "Could not get WDB context from middleware"
 	case 10:
 		message = "Could not get UDB context from middleware"
+	case 11:
+		message = "Failed to get AuthPair context from middleware"
+	case 12:
+		message = "User not found!"
 	default:
 		message = "Unexpected Error, ResponseCode not in valid enum range!"
 	}
