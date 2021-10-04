@@ -18,12 +18,12 @@ Go-based server for a fantasy-themed alchemy game
 
 ### Planned: Next Update
 
-- responses should return error instead of panicing if json prettification fails... will involve refactoring anything using `responses.JSON()`, `responses.FormatResponse()`, or `responses.SendRes()` to handle the 2nd return
+- Content & Interactivity
 
 ### Planned: Unscheduled
 
 - Make auth secret automatically generate if doesn't exist rather than relying on a variable
-- Error tagging: report a unique error/failure # in error message for users to send for troubleshooting
+- Event tagging: report a unique error/failure/event # in error message response for users to send for troubleshooting
 
 ## Build & Run
 
@@ -63,6 +63,8 @@ Recommend running with screen `screen -S brct-game`. If get detached, can forcib
 - Refactored auth/token-validation
 - Added `GET: /api/v0/my/account`
 - - Requires bearer token authorization header, provides full user info
+- responses now return error instead of panicing if json prettification fails...
+- error messages now include code literal meaning as first part of message
 
 ### v0.0.0
 

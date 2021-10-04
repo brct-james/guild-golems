@@ -121,7 +121,7 @@ func VerifyTokenFormatAndDecode(r *http.Request) (jwt.Token, error) {
 func ExtractTokenMetadata(r *http.Request) (ValidationPair, error) {
 	// Verify format and decode
 	token, err := VerifyTokenFormatAndDecode(r)
-	log.Debug.Printf("ExtractTokenMetadata:\nToken:\n%v\nError:\n%v\n", responses.JSON(token), err)
+	log.Debug.Printf("ExtractTokenMetadata:\nToken:\n%v\nError:\n%v\n", token, err)
   if err != nil {
      return ValidationPair{}, err
   }
@@ -170,7 +170,11 @@ func AuthenticateWithDatabase(authD ValidationPair, userDB rdb.Database) (userna
 func ValidateUserToken(r *http.Request, userDB rdb.Database) (username string, token string, err error) {
 	// Extract metadata & validate
 	tokenAuth, err := ExtractTokenMetadata(r)
-	log.Debug.Printf("ValidateUserToken:\nTokenAuth:\n%v\nError:\n%v\n", responses.JSON(tokenAuth), err)
+	tokenAuthJsonString, tokenAuthJsonStringErr := responses.JSON(tokenAuth)
+	if tokenAuthJsonStringErr != nil {
+		log.Error.Printf("Error in ValidateUserToken, could not format tokenAuth as JSON. tokenAuth: %v, error: %v", tokenAuth, tokenAuthJsonStringErr)
+	}
+	log.Debug.Printf("ValidateUserToken:\nTokenAuth:\n%v\nError:\n%v\n", tokenAuthJsonString, err)
 	if err != nil {
 		return "", "", err
 	}
@@ -202,7 +206,11 @@ func GenerateTokenValidationMiddlewareFunc(userDB rdb.Database) func(http.Handle
 				Username: username,
 				Token: token,
 			}
-			log.Debug.Printf("validationPair:\n%v", responses.JSON(validationPair))
+			validationPairJsonString, validationPairJsonStringErr := responses.JSON(validationPair)
+			if validationPairJsonStringErr != nil {
+				log.Error.Printf("Error in GenerateTokenValidationMiddlewareFunc, could not format validationPair as JSON. validationPair: %v, error: %v", validationPair, validationPairJsonStringErr)
+			}
+			log.Debug.Printf("validationPair:\n%v", validationPairJsonString)
 			// Utilize context package to pass validation pair to secure routes from the middleware
 			ctx := r.Context()
 			ctx = context.WithValue(ctx, ValidationContext, validationPair)

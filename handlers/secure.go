@@ -96,7 +96,11 @@ func AccountInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Success case, Output user info to page
-	log.Debug.Printf("Got response from db for GetUser:\n%v", responses.JSON(thisUser))
+	getUserJsonString, getUserJsonStringErr := responses.JSON(thisUser)
+	if getUserJsonStringErr != nil {
+		log.Error.Printf("Error in AccountInfo, could not format thisUser as JSON. thisUser: %v, error: %v", thisUser, getUserJsonStringErr)
+	}
+	log.Debug.Printf("Got response from db for GetUser:\n%v", getUserJsonString)
 	responses.SendRes(w, responses.Generic_Success, thisUser, "")
 	log.Debug.Println(log.Cyan("-- End accountInfo --"))
 }

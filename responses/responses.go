@@ -4,20 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/brct-james/brct-game/log"
 )
 
 // Prettifies input into json string for output
-func JSON(input interface{}) string {
+func JSON(input interface{}) (string, error) {
 	res, err := json.MarshalIndent(input, "", "  ")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return string(res)
+	return string(res), nil
 }
 
 // enum for api response codes
 type ResponseCode int
 const (
+	CRITICAL_JSON_MARSHAL_ERROR ResponseCode = -3
+	JSON_Marshal_Error ResponseCode = -2
 	Unimplemented ResponseCode = -1
 	Generic_Failure ResponseCode = 0
 	Generic_Success ResponseCode = 1
@@ -42,40 +46,44 @@ type Response struct {
 }
 
 // Returns the prettified json string of a properly structure api response given the inputs
-func FormatResponse(code ResponseCode, data interface{}, messageDetail string) string {
+func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (string, error) {
 	var message string
 	// Based on code choose base message text
 	switch code {
+	case -3:
+		message = "[CRITICAL_JSON_MARSHAL_ERROR] Server error in responses.JSON, could not marshal JSON_Marshal_Error response! PLEASE contact developer."
+	case -2:
+		message = "[JSON_Marshal_Error] Responses module encountered an error while marshaling response JSON. Please contact developer."
 	case -1:
-		message = "Unimplemented Feature. You shouldn't be able to hit this on the live build... Please contact developer"
+		message = "[Unimplemented] Unimplemented Feature. You shouldn't be able to hit this on the live build... Please contact developer"
 	case 0:
-		message = "Generic Failure: Contact Admin"
+		message = "[Generic_Failure] Contact developer"
 	case 1:
-		message = "Success"
+		message = "[Generic_Success] Request Successful"
 	case 2:
-		message = "Token was invalid or missing from request. Did you confirm sending the token as an authorization header?"
+		message = "[Auth_Failure] Token was invalid or missing from request. Did you confirm sending the token as an authorization header?"
 	case 3:
-		message = "Username failed validation!"
+		message = "[Username_Validation_Failure] Please ensure username conforms to requirements and account does not already exist!"
 	case 4:
-		message = "Failed to save to DB"
+		message = "[DB_Save_Failure] Failed to save to DB"
 	case 5:
-		message = "Username passed initial validation but could not generate token, contact Admin."
+		message = "[Generate_Token_Failure] Username passed initial validation but could not generate token, contact Admin."
 	case 6:
-		message = "Could not get from world DB"
+		message = "[WDB_Get_Failure] Could not get from world DB"
 	case 7:
-		message = "Could not get from user DB"
+		message = "[UDB_Get_Failure] Could not get from user DB"
 	case 8:
-		message = "Error while attempting to unmarshal JSON from DB"
+		message = "[JSON_Unmarshal_Error] Error while attempting to unmarshal JSON from DB"
 	case 9:
-		message = "Could not get WDB context from middleware"
+		message = "[No_WDB_Context] Could not get WDB context from middleware"
 	case 10:
-		message = "Could not get UDB context from middleware"
+		message = "[No_UDB_Context] Could not get UDB context from middleware"
 	case 11:
-		message = "Failed to get AuthPair context from middleware"
+		message = "[No_AuthPair_Context] Failed to get AuthPair context from middleware"
 	case 12:
-		message = "User not found!"
+		message = "[User_Not_Found] User not found!"
 	default:
-		message = "Unexpected Error, ResponseCode not in valid enum range!"
+		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}
 
 	// Define response
@@ -90,9 +98,23 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) s
 		res.Message = message + " | " + messageDetail
 	}
 
-	return JSON(res)
+	responseText, jsonErr := JSON(res)
+	if jsonErr != nil {
+		return "", jsonErr
+	}
+	return responseText, nil
 }
 
 func SendRes(w http.ResponseWriter, code ResponseCode, data interface{}, messageDetail string) {
-	fmt.Fprint(w, FormatResponse(code, data, messageDetail))
+	responseObject, jsonErr := FormatResponse(code, data, messageDetail)
+	if jsonErr != nil {
+		jsonErrMsg := fmt.Sprintf("Could not MarshallIndent json for data %v", data)
+		errResponseObject, criticalJsonError := FormatResponse(JSON_Marshal_Error, nil, jsonErrMsg)
+		if criticalJsonError != nil {
+			log.Error.Printf("Could not format MarshallIndent response, error: %v", criticalJsonError)
+			fmt.Fprintf(w, "{\"code\":-3, \"message\": \"CRITICAL SERVER ERROR in responses.JSON, could not marshal JSON_Marshal_Error response! PLEASE contact developer. Error: %v\", \"data\":{}", criticalJsonError)
+		}
+		fmt.Fprint(w, errResponseObject)
+	}
+	fmt.Fprint(w, responseObject)
 }
