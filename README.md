@@ -21,7 +21,6 @@ Go-based server for a fantasy-themed alchemy game
 
 ### Planned: Next Update
 
-- Rename handlers/general to handlers/public
 - responses should return error instead of panicing if json prettification fails... will involve refactoring anything using `responses.JSON()`, `responses.FormatResponse()`, or `responses.SendRes()` to handle the 2nd return
 
 ### Planned: Unscheduled
