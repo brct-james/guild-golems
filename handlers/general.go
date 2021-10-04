@@ -3,143 +3,205 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/brct-james/brct-game/auth"
 	"github.com/brct-james/brct-game/log"
 	"github.com/brct-james/brct-game/rdb"
 	"github.com/brct-james/brct-game/responses"
 	"github.com/brct-james/brct-game/schema"
+	"github.com/gorilla/mux"
 )
+
+// Helper Functions
+
+// Attemmpt to save user, returns error or nil if successful
+func SaveUserToDB(udb rdb.Database, token string, userData schema.User) error {
+	err := udb.SetJsonData(token, ".", userData)
+	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
+	return err
+}
+
+// Attempt to get udb from context, return udb, nil if successful else return rdb.Database{}, nil
+func GetUdbFromCtx(r *http.Request) (rdb.Database, error) {
+	log.Debug.Println("Recover udb from context")
+	udb, ok := r.Context().Value(UserDBContext).(rdb.Database)
+	if !ok {
+		return rdb.Database{}, errors.New("could not get UserDBContext")
+	}
+	return udb, nil
+}
+
+// Handler Functions
 
 // Handler function for the route: /
 func Homepage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Guild Golems")
-	log.Debug.Println("Hit: homepage")
+	log.Debug.Println(log.Yellow("-- Homepage --"))
+	responses.SendRes(w, responses.Unimplemented, nil, "Homepage")
+	log.Debug.Println(log.Cyan("-- End Homepage --"))
 }
 
 // Handler function for the route: /api
 func ApiSelection(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "ApiSel")
-	log.Debug.Println("Hit: apisel")
+	log.Debug.Println(log.Yellow("-- apiSel --"))
+	responses.SendRes(w, responses.Unimplemented, nil, "apiSel")
+	log.Debug.Println(log.Cyan("-- End apiSel --"))
 }
 
 // Handler function for the route: /api/v0
 func V0Docs(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "ApiDocs")
-	log.Debug.Println("Hit: apidocs")
+	log.Debug.Println(log.Yellow("-- v0Docs --"))
+	responses.SendRes(w, responses.Unimplemented, nil, "v0Docs")
+	log.Debug.Println(log.Cyan("-- End v0Docs --"))
 }
 
 // Handler function for the route: /api/v0/status
 func V0Status(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "v0Status")
-	log.Debug.Println("Hit: v0Status")
+	log.Debug.Println(log.Yellow("-- v0Status --"))
+	responses.SendRes(w, responses.Unimplemented, nil, "v0Status")
+	log.Debug.Println(log.Cyan("-- End v0Status --"))
 }
 
 // Handler function for the route: /api/v0/users
 func UsersSummary(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "usersSummary")
-	log.Debug.Println("Hit: usersSummary")
+	log.Debug.Println(log.Yellow("-- usersSummary --"))
+	responses.SendRes(w, responses.Unimplemented, nil, "usersSummary")
+	log.Debug.Println(log.Cyan("-- End usersSummary --"))
 }
 
 // Handler function for the route: /api/v0/users/{username}
 func UsernameInfo(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "usernameInfo")
-	log.Debug.Println("Hit: usernameInfo")
+	log.Debug.Println(log.Yellow("-- usernameInfo --"))
+	udb, udbErr := GetUdbFromCtx(r)
+	if udbErr != nil {
+		// Fail state getting context
+		log.Error.Printf("Could not get UserDBContext in UsernameInfo")
+		responses.SendRes(w, responses.No_UDB_Context, nil, "in UsernameInfo")
+		return
+	}
+	// Get username from route
+	route_vars := mux.Vars(r)
+	username := route_vars["username"]
+	log.Debug.Printf("UsernameInfo Requested for: %s", username)
+	// Get username info from DB
+	token, genTokenErr := auth.GenerateToken(username)
+	if genTokenErr != nil {
+		// fail state
+		log.Important.Printf("in UsernameInfo: Attempted to generate token using username %s but was unsuccessful with error: %v", username, genTokenErr)
+		genErrorMsg := fmt.Sprintf("Could not get, failed to convert username to DB token. Username: %v | GenerateTokenErr: %v", username, genTokenErr)
+		responses.SendRes(w, responses.Generate_Token_Failure, nil, genErrorMsg)
+		return
+	}
+	userData, getError := schema.GetUserFromDB(token, udb)
+	if getError != nil {
+		// fail state
+		getErrorMsg := fmt.Sprintf("in UsernameInfo, could not get from DB for username: %s, error: %v", username, getError)
+		responses.SendRes(w, responses.UDB_Get_Failure, nil, getErrorMsg)
+		return
+	}
+	// success state
+	resData := schema.PublicUserInfo{
+		Username: userData.Username,
+		Tagline: userData.Tagline,
+		Coins: userData.Coins,
+		UserSince: userData.UserSince,
+	}
+	responses.SendRes(w, responses.Generic_Success, resData, "")
+	log.Debug.Println(log.Cyan("-- End usernameInfo --"))
 }
 
-// Defines the structure for the /api/v0/users/{username}/claim (POST) response
-type UsernameClaimResponse struct {
-	Username string `json:"username"`
-	Token string `json:"token"`
+// Handler function for the route: /api/v0/users/{username}/claim
+func UsernameClaim(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- usernameClaim --"))
+	log.Debug.Println("Recover udb from context")
+	udb, udbErr := GetUdbFromCtx(r)
+	if udbErr != nil {
+		// Fail state getting context
+		log.Error.Printf("Could not get UserDBContext in UsernameClaim")
+		responses.SendRes(w, responses.No_UDB_Context, nil, "in UsernameClaim")
+		return
+	}
+	// Get username from route
+	route_vars := mux.Vars(r)
+	username := route_vars["username"]
+	log.Debug.Printf("Username Requested: %s", username)
+	// Validate username (length & content, plus characters)
+	usernameValidationStatus := auth.ValidateUsername(username)
+	if usernameValidationStatus != "OK" {
+		// fail state
+		validationErrorMessage := fmt.Sprintf("in UsernameClaim: Username: %v | ValidationResponse: %v", username, usernameValidationStatus)
+		log.Debug.Println(validationErrorMessage)
+		responses.SendRes(w, responses.Username_Validation_Failure, nil, validationErrorMessage)
+		return
+	}
+	// generate token
+	token, genTokenErr := auth.GenerateToken(username)
+	if genTokenErr != nil {
+		// fail state
+		log.Important.Printf("in UsernameClaim: Attempted to generate token using username %s but was unsuccessful with error: %v", username, genTokenErr)
+		genErrorMsg := fmt.Sprintf("Username: %v | GenerateTokenErr: %v", username, genTokenErr)
+		responses.SendRes(w, responses.Generate_Token_Failure, nil, genErrorMsg)
+		return
+	}
+	// check DB for existing user
+	userExists, dbGetError := schema.CheckForExistingUser(token, udb)
+	if dbGetError != nil {
+		// fail state - db error
+		dbGetErrorMsg := fmt.Sprintf("in UsernameClaim | Username: %v | UDB Get Error: %v", username, dbGetError)
+		log.Debug.Println(dbGetErrorMsg)
+		responses.SendRes(w, responses.UDB_Get_Failure, nil, dbGetErrorMsg)
+		return
+	}
+	if userExists {
+		// fail state - user already exists
+		validationFailMsg := fmt.Sprintf("in UsernameClaim | Username: %v | Reason: USER_ALREADY_EXISTS", username)
+		log.Debug.Println(validationFailMsg)
+		responses.SendRes(w, responses.Username_Validation_Failure, nil, validationFailMsg)
+		return
+	}
+	// create new user in DB
+	newUser := schema.NewUser(token, username)
+	saveUserErr := SaveUserToDB(udb, token, newUser)
+	if saveUserErr != nil {
+		// fail state - could not save
+		saveUserErrMsg := fmt.Sprintf("in UsernameClaim | Username: %v | CreateNewUserInDB failed, dbSaveResult: %v", username, saveUserErr)
+		log.Debug.Println(saveUserErrMsg)
+		responses.SendRes(w, responses.DB_Save_Failure, nil, saveUserErrMsg)
+		return
+	}
+	// Created successfully
+	log.Debug.Printf("Generated token %s and claimed username %s", token, username)
+	responses.SendRes(w, 1, newUser, "")
+	log.Debug.Println(log.Cyan("-- End usernameClaim --"))
 }
-
-// // Handler function for the route: /api/v0/users/{username}/claim
-// func UsernameClaim(w http.ResponseWriter, r *http.Request) {
-// 	if verbose {
-// 		log.Verbose.Println(log.Yellow("-- usernameClaim --"))
-// 		log.Verbose.Println("Recover udb from context")
-// 	}
-// 	if udb, ok := r.Context().Value(UserDBContext).(db.Database); ok {
-// 		// Get username from route
-// 		vars := mux.Vars(r)
-// 		username := vars["username"]
-// 		if verbose {
-// 			log.Verbose.Printf("Username Requested: %s", username)
-// 		}
-// 		// Validate username (length & content, plus characters) & generate token if valid
-// 		token, usernameValidationStatus, genTokenErr := auth.ValidateUsernameAndGenerateToken(username, udb)
-// 		if usernameValidationStatus == "OK" {
-// 			if genTokenErr != nil {
-// 				// Error case, output to page and console if verbose
-// 				genErrorMessage := fmt.Sprintf("Username: %v | GenerateTokenErr: %v", username, genTokenErr)
-// 				generationErrorRes := responses.FormatResponse(5, UsernameClaimResponse{Username: username, Token: *token}, genErrorMessage)
-// 				if verbose {
-// 					log.Verbose.Println(genErrorMessage)
-// 				}
-// 				fmt.Fprint(w, generationErrorRes)
-// 			} else {
-// 				// Success case, attempt to create new user in db
-// 				dbSaveResult := CreateNewUserInDB(udb, username, *token)
-// 				if dbSaveResult == "OK" {
-// 					// Success case, output to page and console if verbose
-// 					if verbose {
-// 						log.Verbose.Printf("Generated token %s and claimed username %s", *token, username)
-// 					}
-// 					res := responses.FormatResponse(1, UsernameClaimResponse{Username: username, Token: *token}, "")
-// 					fmt.Fprint(w, res)
-// 				} else {
-// 					// Error case, output to page and console if verbose
-// 					dbsaveErrorMessage := fmt.Sprintf("Username: %v | CreateNewUserInDB failed, dbSaveResult: %v", username, dbSaveResult)
-// 					dbsaveErrorRes := responses.FormatResponse(4, UsernameClaimResponse{Username: username, Token: *token}, dbsaveErrorMessage)
-// 					if verbose {
-// 						log.Verbose.Println(dbsaveErrorMessage)
-// 					}
-// 					fmt.Fprint(w, dbsaveErrorRes)
-// 				}
-// 			}
-// 		} else {
-// 			// Validation fail, ouput to page and console if verbose
-// 			validationErrorMessage := fmt.Sprintf("Username: %v | ValidationResponse: %v", username, usernameValidationStatus)
-// 			validationErrorRes := responses.FormatResponse(3, UsernameClaimResponse{Username: username, Token: ""}, validationErrorMessage)
-// 			if verbose {
-// 				log.Verbose.Println(validationErrorMessage)
-// 			}
-// 			fmt.Fprint(w, validationErrorRes)
-// 		}
-// 	}
-// 	if verbose {
-// 		log.Verbose.Println(log.Cyan("-- End usernameClaim --"))
-// 	}
-// }
-
-// // Attemmpt to create user, return value of db.CreateUser (should be "OK" or error text)
-// func CreateNewUserInDB(udb db.Database, username string, token string) string {
-// 	creationSuccess := db.CreateUser(udb, username, token, 0)
-// 	return creationSuccess
-// }
 
 // Handler function for the route: /api/v0/locations
 func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- locationsOverview -- "))
 	log.Debug.Println("Recover wdb from context")
 	// Get wdb context
-	if wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database); ok {
-		// Output world info to page
-		bytes, err := wdb.GetJsonData("world", ".")
-		if err != nil {
-			log.Error.Printf("Could not get world from DB! Err: %v", err)
-			// TODO: This should output failure state once migrated to Responses
-		}
-		worldData := schema.World{}
-		err = json.Unmarshal(bytes, &worldData)
-		if err != nil {
-			log.Error.Fatalf("Could not unmarshal world json from DB: %v", err)
-		}
-		fmt.Fprint(w, responses.JSON(worldData))
-	} else {
+	wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database)
+	if !ok {
 		log.Error.Printf("Could not get WorldDBContext in LocationsOverview")
-		// TODO: This should output failure state once migrated to Responses
+		responses.SendRes(w, responses.No_WDB_Context, nil, "in LocationsOverview")
+		return
 	}
+	// Output world info to page
+	bytes, err := wdb.GetJsonData("world", ".")
+	if err != nil {
+		log.Error.Printf("Could not get world from DB! Err: %v", err)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "in LocationsOverview")
+		return
+	}
+	worldData := schema.World{}
+	err = json.Unmarshal(bytes, &worldData)
+	if err != nil {
+		log.Error.Printf("Could not unmarshal world json from DB: %v", err)
+		responses.SendRes(w, responses.JSON_Unmarshal_Error, nil, "in LocationsOverview")
+		return
+	}
+	responses.SendRes(w, responses.Generic_Success, worldData, "")
 	log.Debug.Println(log.Cyan("-- End locationsOverview -- "))
 }

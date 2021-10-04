@@ -1,5 +1,13 @@
 package auth
 
+import (
+	"os"
+	"regexp"
+
+	"github.com/brct-james/brct-game/log"
+	"github.com/golang-jwt/jwt"
+)
+
 // import (
 // 	"context"
 // 	"crypto/rand"
@@ -30,52 +38,37 @@ type ValidationPair struct{
 // 	ValidationContext ValidationResponseKey = iota
 // )
 
-// // Used by UsernameClaim handler to validate username meets spec before attempting user creation
-// func ValidateUsernameAndGenerateToken (username string, userDB db.Database) (token *string, usernameValidationStatus string, genTokenErr error) {
-// 	// Defines acceptable chars
-// 	isAlphaNumeric := regexp.MustCompile(`^[A-Za-z0-9\-\_]+$`).MatchString
-// 	if username == "" {
-// 		return nil, "CANT_BE_BLANK", nil
-// 	} else if len(username) <= 0 {
-// 		return nil, "TOO_SHORT", nil
-// 	} else if !isAlphaNumeric(username) {
-// 		return nil, "INVALID_CHARS", nil
-// 	} else {
-// 		// Generate a token using username and check if already exists in db
-// 		token, err := GenerateToken(username)
-// 		if err != nil {
-// 			// GenerateToken had error, pass up to calling func
-// 			log.Warning.Printf("ValidateUsername: Attempted to generate token using username %s but as unsuccessful with error: %v", username, err)
-// 			return nil, "OK", err
-// 		}
-// 		// Get user and see if already exists
-// 		if _, ok := db.GetUser(userDB, *token); ok {
-// 			return nil, "ALREADY_EXISTS", nil
-// 		} else {
-// 			// Could not get, doesn't already exist, pass OK and return token
-// 			return token, "OK", nil
-// 		}
-// 	}
-// }
+// validate that username meets spec
+func ValidateUsername (username string) string {
+	// Defines acceptable chars
+	isAlphaNumeric := regexp.MustCompile(`^[A-Za-z0-9\-\_]+$`).MatchString
+	if username == "" {
+		return "CANT_BE_BLANK"
+	} else if len(username) <= 0 {
+		return "TOO_SHORT"
+	} else if !isAlphaNumeric(username) {
+		return "INVALID_CHARS"
+	} else {
+		return "OK"
+	}
+}
 
-// // Generates a new token based on username and gg_access_secret
-// func GenerateToken(username string) (*string, error) {
-// 	// Creating access token
-// 	// Set claims for jwt
-// 	atClaims := jwt.MapClaims{}
-// 	atClaims["username"]=username
-// 	// Use signing method HS256
-// 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
-// 	if verbose {
-// 		log.Verbose.Printf("Got GG_ACCESS_SECRET:\n%s", os.Getenv("GG_ACCESS_SECRET"))
-// 	}
-// 	// Generate token using gg_access_secret
-// 	token, err := at.SignedString([]byte(os.Getenv("GG_ACCESS_SECRET")))
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &token, nil
-// }
+// Generates a new token based on username and gg_access_secret
+func GenerateToken(username string) (string, error) {
+	// Creating access token
+	// Set claims for jwt
+	atClaims := jwt.MapClaims{}
+	atClaims["username"]=username
+	// Use signing method HS256
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
+	log.Debug.Printf("Got GG_ACCESS_SECRET:\n%s", os.Getenv("GG_ACCESS_SECRET"))
+	// Generate token using gg_access_secret
+	token, err := at.SignedString([]byte(os.Getenv("GG_ACCESS_SECRET")))
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
 
 // // Extract Token from request header
 // func ExtractToken(r *http.Request) (token *string, ok bool) {

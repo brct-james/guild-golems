@@ -4,23 +4,30 @@ Go-based server for a fantasy-themed alchemy game
 
 ## Features
 
-- Nothing
+- Register a username and get your public user info ~~as well as the secure `/my/account` endpoint~~
 
 ### Endpoints
 
 - `GET: api/v0/locations` returns entire world json from DB
 
-## Roadmap / TODO
+## Roadmap
 
-- [In-Progress] Port progress from guild-golems following idioms
+### In-Progress
+
+- Port progress from guild-golems following idioms
 - - Working on restoring the following:
 - - - auth/token-validation
-- - - handlers/general
-- - - - Refactor locationsOverview in particular - its uncommented and updated but not been streamlined nor made to conform to idioms
 - - - handlers/secure
-- - - rdb (specifically, how handling user vs world CRUD - do I want/need wrappers for this?)
-- - - responses/responses
+
+### Planned: Next Update
+
+- Rename handlers/general to handlers/public
+- responses should return error instead of panicing if json prettification fails... will involve refactoring anything using `responses.JSON()`, `responses.FormatResponse()`, or `responses.SendRes()` to handle the 2nd return
+
+### Planned: Unscheduled
+
 - Make auth secret automatically generate if doesn't exist rather than relying on a variable
+- Error tagging: report a unique error/failure # in error message for users to send for troubleshooting
 
 ## Build & Run
 
@@ -36,7 +43,7 @@ redis-cli via `redis-cli -p 6381`
 
 `FLUSHDB` for each database (`select #`)
 
-Recommend running with screen `screen -S gg`. If get detached, can forcibly detach the old ssh session and reattach with `screen -Dr gg`
+Recommend running with screen `screen -S brct-game`. If get detached, can forcibly detach the old ssh session and reattach with `screen -Dr brct-game`
 
 ## Changelog
 
@@ -46,6 +53,15 @@ Recommend running with screen `screen -S gg`. If get detached, can forcibly deta
 - - World db can be loaded from json
 - Automatically generates access secret
 - Added `GET: /api/v0/locations`
+- - Refactored locationsOverview
+- Added `GET: /api/v0/users/{username}`
+- - Refactored usernameInfo
+- Added `POST: /api/v0/users/{username}/claim`
+- - Refactored usernameClaim
+- All other holdover general endpoints have had their placeholder info refactored
+- Added user schema
+- - user.go defines not only the `User` struct but also the `PublicUserInfo` struct as well as `NewUser()`, `CheckForExistingUser()`, and `GetUserFromDB()` funcs
+- - - I decided to put these in the schema files for now, as that makes the most sense IMO - rdb is just for interacting with the DB, it shouldn't have anything to do with the data
 
 ### v0.0.0
 

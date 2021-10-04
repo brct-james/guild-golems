@@ -17,8 +17,9 @@ import (
 
 // Configuration
 
-var reloadWorldFromJSON bool = true
-var refreshAuthSecret bool = true
+var reloadWorldFromJSON bool = false
+var refreshAuthSecret bool = false
+var flushUDB bool = true
 
 var worldJSONPath string = "./v0_world.json"
 
@@ -57,6 +58,9 @@ func main() {
 	if refreshAuthSecret {
 		log.Important.Printf("(Re)Generating Auth Secret")
 		auth.CreateOrUpdateAuthSecretInFile()
+	}
+
+	if refreshAuthSecret || flushUDB {
 		log.Important.Printf("Flushing User Database")
 		userDatabase.Flush()
 	}
@@ -91,9 +95,9 @@ func initializeWorldDB(wdb rdb.Database) {
 	}
 
 	worldData := schema.World{}
-	err = json.Unmarshal(bytes, &worldData)
-	if err != nil {
-		log.Error.Fatalf("Could not unmarshal world json from DB: %v", err)
+	unmarshalErr := json.Unmarshal(bytes, &worldData)
+	if unmarshalErr != nil {
+		log.Error.Fatalf("Could not unmarshal world json from DB: %v", unmarshalErr)
 	}
 	success := fmt.Sprintf("%v", reflect.DeepEqual(worldData, res))
 	log.Test.Printf("DOES WORLD IN DB DEEPEQUAL WORLD FROM JSON? %s", log.TestOutput(success, "true"))
@@ -112,7 +116,7 @@ func handleRequests() {
 	mxr.HandleFunc("/api/v0/status", handlers.V0Status).Methods("GET")
 	mxr.HandleFunc("/api/v0/users", handlers.UsersSummary).Methods("GET")
 	mxr.HandleFunc("/api/v0/users/{username}", handlers.UsernameInfo).Methods("GET")
-	// mxr.HandleFunc("/api/v0/users/{username}/claim", handlers.UsernameClaim).Methods("POST")
+	mxr.HandleFunc("/api/v0/users/{username}/claim", handlers.UsernameClaim).Methods("POST")
 	mxr.HandleFunc("/api/v0/locations", handlers.LocationsOverview).Methods("GET")
 
 	// secure subrouter for account-specific routes
