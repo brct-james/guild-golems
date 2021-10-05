@@ -21,9 +21,3 @@ type HarvestableResource struct {
 	Resource
 	Rarity float64 `json:"rarity" binding:"required"`
 }
-
-// Defines inventory resource
-type InventoryResource struct {
-	Resource
-	LocationSymbol string `json:"location_symbol" binding:"required"`
-}

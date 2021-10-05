@@ -62,9 +62,20 @@ default:
 
 ### In-Progress
 
-- Nothing
+- Rituals v0
+- - `GET .../my/rituals` list rituals
+- - `GET .../my/rituals/summon-invoker` information on the given ritual
+- - Summon golems, cast spells
+- - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
+- - Uses mana, which is generated passively. Generation can be amplified using invokers.
+- Golems v0
+- `.../my/invokers/{symbol}` to manage individual invokers
+- - `GET` lists invoker info
+- - `PUT` to change invoker status (to traveling, generating mana, etc.)
+- - `DELETE` to delete the invoker
+- - v0: single golem type per task, takes mana to summon, summoner golems generate mana
 
-### Planned: v0 MVP
+### Planned: v0.1 MVP
 
 - Ratelimiting
 - - Per-IP hard limit, slightly higher than per-token limit
@@ -127,8 +138,6 @@ default:
 - - - v0: basic fog of war, as using this route to get market listings, so merchants must be at a location to get the values of that route
 - - add action routes beneath each of these task endpoints (e.g. move, buy, sell, collect, create, etc.)
 - - `.../my/invokers` summon new golems for each given task and cast other spells
-- - - v0: single golem type per task, takes mana to summon, summoner golems generate mana
-- - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
 - rework `/locations` routes to be more specific, include list of users with golems at each location and how many
 - `.../my/inventory` inventory report showing what resources are at each location
 - `.../my/golems` golem report showing what golems are at each location and what task they are doing if active
@@ -146,6 +155,7 @@ default:
 - World Events
 - - Contribute resources and money towards world events that unlock new content once they are completed
 - - - E.g. "crusade to clear the huge dungeon outside of town needs potions to supply its fighters, unlocking this area for gathering after", "archmage is investigating the creation of the philosopher stone, once complete everyone can buy a stone that unlocks new recipes", etc.
+- complicate golems by adding energy. Golems have energy which goes down after each task and slowly regenerates.
 - complicate `harvesting`: some kind of 'harvesting techniques' perhaps, to add depth - say 10 different harvesting techniques for each type of harvesting, along with some randomness in yield, so that you need to track yield over time with each technique for each resource to optimize effectively
 - complicate `couriers`: incorporate route risk and courier preparedness (e.g. more couriers for less resources make them faster and easier to defend, and some couriers may have a combat focus)
 - complicate `artisans`:
@@ -176,7 +186,10 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 
 ### v0.0.2
 
-- Nothing
+- Golems v0
+- - Golems are created via rituals
+- `GET.../my/invokers` list invokers
+- `POST .../my/rituals/summon-invoker` create new invoker
 
 ### v0.0.1
 

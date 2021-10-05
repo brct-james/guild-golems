@@ -17,9 +17,9 @@ import (
 
 // Configuration
 
-var reloadWorldFromJSON bool = true
-var refreshAuthSecret bool = true
-var flushUDB bool = false
+var reloadWorldFromJSON bool = false
+var refreshAuthSecret bool = false
+var flushUDB bool = true
 
 var worldJSONPath string = "./v0_world.json"
 
@@ -122,6 +122,12 @@ func handleRequests() {
 	secure := mxr.PathPrefix("/api/v0/my").Subrouter()
 	secure.Use(auth.GenerateTokenValidationMiddlewareFunc(userDatabase))
 	secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
+	secure.HandleFunc("/invokers", handlers.GetInvokers).Methods("GET")
+	secure.HandleFunc("/invokers/{symbol}", handlers.InvokerInfo).Methods("GET")
+	secure.HandleFunc("/invokers/{symbol}", handlers.ChangeInvokerTask).Methods("PUT")
+	secure.HandleFunc("/rituals", handlers.ListRituals).Methods("GET")
+	secure.HandleFunc("/rituals/{ritual}", handlers.GetRitualInfo).Methods("GET")
+	secure.HandleFunc("/rituals/summon-invoker", handlers.NewInvoker).Methods("POST")
 
 	// Start listening
 	log.Info.Printf("Listening on %s", ListenPort)

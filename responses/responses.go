@@ -36,6 +36,7 @@ const (
 	No_UDB_Context ResponseCode = 10
 	No_AuthPair_Context ResponseCode = 11
 	User_Not_Found ResponseCode = 12
+	Not_Enough_Mana ResponseCode = 13
 )
 
 // Defines Response structure for output
@@ -82,6 +83,8 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[No_AuthPair_Context] Failed to get AuthPair context from middleware"
 	case 12:
 		message = "[User_Not_Found] User not found!"
+	case 13:
+		message = "[Not_Enough_Mana] Could not complete requested action due to insufficient mana"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

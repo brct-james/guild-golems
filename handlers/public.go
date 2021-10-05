@@ -17,7 +17,7 @@ import (
 
 // Helper Functions
 
-// Attemmpt to save user, returns error or nil if successful
+// Attempt to save user, returns error or nil if successful
 func SaveUserToDB(udb rdb.Database, token string, userData schema.User) error {
 	err := udb.SetJsonData(token, ".", userData)
 	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
@@ -32,6 +32,34 @@ func GetUdbFromCtx(r *http.Request) (rdb.Database, error) {
 		return rdb.Database{}, errors.New("could not get UserDBContext")
 	}
 	return udb, nil
+}
+
+// Attempt to get user from db
+func publicGetUser(w http.ResponseWriter, r *http.Request, username string, token string) (bool, schema.User, rdb.Database) {
+	// Get udb from context
+	udb, udbErr := GetUdbFromCtx(r)
+	if udbErr != nil {
+		// Fail state getting context
+		log.Error.Printf("Could not get UserDBContext in publicGetUser")
+		responses.SendRes(w, responses.No_UDB_Context, nil, "in publicGetUser")
+		return false, schema.User{}, rdb.Database{}
+	}
+	// Check db for user
+	thisUser, userFound, getUserErr := schema.GetUserFromDB(token, udb)
+	if getUserErr != nil {
+		// fail state
+		getErrorMsg := fmt.Sprintf("in publicGetUser, could not get from DB for username: %s, error: %v", username, getUserErr)
+		responses.SendRes(w, responses.UDB_Get_Failure, nil, getErrorMsg)
+		return false, schema.User{}, rdb.Database{}
+	}
+	if !userFound {
+		// fail state - user not found
+		userNotFoundMsg := fmt.Sprintf("in publicGetUser, no user found in DB with username: %s", username)
+		responses.SendRes(w, responses.User_Not_Found, nil, userNotFoundMsg)
+		return false, schema.User{}, rdb.Database{}
+	}
+	// Success case
+	return true, thisUser, udb
 }
 
 // Handler Functions
@@ -67,13 +95,6 @@ func UsersSummary(w http.ResponseWriter, r *http.Request) {
 // Handler function for the route: /api/v0/users/{username}
 func UsernameInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- usernameInfo --"))
-	udb, udbErr := GetUdbFromCtx(r)
-	if udbErr != nil {
-		// Fail state getting context
-		log.Error.Printf("Could not get UserDBContext in UsernameInfo")
-		responses.SendRes(w, responses.No_UDB_Context, nil, "in UsernameInfo")
-		return
-	}
 	// Get username from route
 	route_vars := mux.Vars(r)
 	username := route_vars["username"]
@@ -87,23 +108,14 @@ func UsernameInfo(w http.ResponseWriter, r *http.Request) {
 		responses.SendRes(w, responses.Generate_Token_Failure, nil, genErrorMsg)
 		return
 	}
-	userData, userFound, getError := schema.GetUserFromDB(token, udb)
-	if getError != nil {
-		// fail state
-		getErrorMsg := fmt.Sprintf("in UsernameInfo, could not get from DB for username: %s, error: %v", username, getError)
-		responses.SendRes(w, responses.UDB_Get_Failure, nil, getErrorMsg)
-		return
-	}
-	if !userFound {
-		// fail state - user not found
-		userNotFoundMsg := fmt.Sprintf("in UsernameInfo, no user found in DB with username: %s", username)
-		responses.SendRes(w, responses.User_Not_Found, nil, userNotFoundMsg)
-		return
+	OK, userData, _ := publicGetUser(w, r, username, token)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
 	}
 	// success state
 	resData := schema.PublicUserInfo{
 		Username: userData.Username,
-		Tagline: userData.Tagline,
+		Title: userData.Title,
 		Coins: userData.Coins,
 		UserSince: userData.UserSince,
 	}
@@ -172,7 +184,7 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 	}
 	// Created successfully
 	log.Debug.Printf("Generated token %s and claimed username %s", token, username)
-	responses.SendRes(w, 1, newUser, "")
+	responses.SendRes(w, responses.Generic_Success, newUser, "")
 	log.Debug.Println(log.Cyan("-- End usernameClaim --"))
 }
 

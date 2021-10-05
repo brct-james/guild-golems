@@ -13,27 +13,51 @@ import (
 // Defines a user which has Name, Symbol, Description
 type User struct {
 	Token string `json:"token" binding:"required"`
-	Username string `json:"username" binding:"required"`
-	Tagline string `json:"tagline" binding:"required"`
-	Coins uint64 `json:"coins" binding:"required"`
-	UserSince int64 `json:"user-since" binding:"required"`
+	PublicUserInfo
+	ManaDetails
+	Golems []Golem `json:"golems" binding:"required"`
+	Inventory []LocationInventory `json:"inventory" binding:"required"`
 }
 
 // Defines the public User info for the /users/{username} endpoint
 type PublicUserInfo struct {
 	Username string `json:"username" binding:"required"`
-	Tagline string `json:"tagline" binding:"required"`
+	Title string `json:"title" binding:"required"`
 	Coins uint64 `json:"coins" binding:"required"`
 	UserSince int64 `json:"user-since" binding:"required"`
+}
+
+// Defines the schema for ManaDetails - a struct containing information on mana for players
+type ManaDetails struct {
+	Mana float64 `json:"mana" binding:"required"`
+	ManaCap float64 `json:"mana-cap" binding:"required"`
+	ManaRegen float64 `json:"mana-regen" binding:"required"`
+	LastManaTick int64 `json:"last-mana-tick" binding:"required"`
+}
+
+// Defines the schema for LocationInventories - lists of items owned by the player at a certain location
+type LocationInventory struct {
+	LocationSymbol string `json:"location-symbol" binding:"required"`
+	Contents []Resource `json:"contents" binding:"required"`
 }
 
 func NewUser(token string, username string) User {
 	return User{
 		Token: token,
-		Username: username,
-		Tagline: "",
-		Coins: 0,
-		UserSince: time.Now().Unix(),
+		PublicUserInfo: PublicUserInfo{
+			Username: username,
+			Title: "",
+			Coins: 0,
+			UserSince: time.Now().Unix(),
+		},
+		ManaDetails: ManaDetails{
+			Mana: 3600.0,
+			ManaCap: 21600.0,
+			ManaRegen: 60.0,
+			LastManaTick: time.Now().Unix(),
+		},
+		Golems: make([]Golem, 0),
+		Inventory: make([]LocationInventory, 0),
 	}
 }
 
