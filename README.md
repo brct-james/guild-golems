@@ -11,6 +11,9 @@ Go-based server for a fantasy-themed guild management game
 - - Get public user info at `/api/v0/users/{username}` and get private user info including token at `/api/v0/my/account`
 - Basic location info
 - - Get world json: `GET: https://guildgolems.io/api/v0/locations`
+- Summon Golems using Mana
+- - `invokers` amplify your mana regen
+- - Mana regen is calculated every time `secureGetUser` is called
 
 ### Endpoints
 
@@ -62,12 +65,6 @@ default:
 
 ### In-Progress
 
-- Rituals v0
-- - `GET .../my/rituals` list rituals
-- - `GET .../my/rituals/summon-invoker` information on the given ritual
-- - Summon golems, cast spells
-- - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
-- - Uses mana, which is generated passively. Generation can be amplified using invokers.
 - Golems v0
 - `.../my/invokers/{symbol}` to manage individual invokers
 - - `GET` lists invoker info
@@ -77,6 +74,9 @@ default:
 
 ### Planned: v0.1 MVP
 
+- Rituals v0
+- - cast spells
+- - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
 - Ratelimiting
 - - Per-IP hard limit, slightly higher than per-token limit
 - - Per-IP route-specific hard limit for claiming usernames
@@ -141,6 +141,7 @@ default:
 - rework `/locations` routes to be more specific, include list of users with golems at each location and how many
 - `.../my/inventory` inventory report showing what resources are at each location
 - `.../my/golems` golem report showing what golems are at each location and what task they are doing if active
+- `rituals` should be loaded from json into memory, User.KnownRituals should instead store the symbols and the ListRituals handler should lookup the rituals from the json map
 
 ### Planned: Unscheduled
 
@@ -189,7 +190,11 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - Golems v0
 - - Golems are created via rituals
 - `GET.../my/invokers` list invokers
-- `POST .../my/rituals/summon-invoker` create new invoker
+- Rituals v0
+- - `GET .../my/rituals` list rituals
+- - `POST .../my/rituals/summon-invoker` create new invoker
+- - `GET .../my/rituals/summon-invoker` information on the given ritual
+- Implemented the basics of the mana system and regeneration
 
 ### v0.0.1
 

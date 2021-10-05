@@ -13,6 +13,7 @@ import (
 	"github.com/brct-james/guild-golems/rdb"
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
+	"github.com/gorilla/mux"
 )
 
 // HELPER FUNCTIONS
@@ -98,6 +99,7 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 		return false, schema.User{}, rdb.Database{}, auth.ValidationPair{}
 	}
 	// Success case
+	thisUser.Mana = gamelogic.CalculateManaRegen(thisUser)
 	return true, thisUser, udb, userInfo
 }
 
@@ -179,44 +181,37 @@ func ListRituals(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	//* Placeholder/
-	getUserJsonString, getUserJsonStringErr := responses.JSON(userData)
-	if getUserJsonStringErr != nil {
-		log.Error.Printf("Error in ListRituals, could not format thisUser as JSON. userData: %v, error: %v", userData, getUserJsonStringErr)
-	}
-	log.Debug.Printf("Sending response for ListRituals:\n%v", getUserJsonString)
-	responses.SendRes(w, responses.Generic_Success, userData, "")
-	//*/
+	responses.SendRes(w, responses.Generic_Success, userData.KnownRituals, "")
 	log.Debug.Println(log.Cyan("-- End ListRituals --"))
 }
 
 // Handler function for the secure route: GET /api/v0/my/rituals/{ritual}
 func GetRitualInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- GetRitualInfo --"))
-	OK, userData, _, _ := secureGetUser(w, r)
-	if !OK {
-		return // Failure states handled by secureGetUser, simply return
+	// Get ritual from route
+	route_vars := mux.Vars(r)
+	ritual := route_vars["ritual"]
+	var responseData schema.Ritual
+	switch ritual {
+	case "summon-invoker":
+		responseData = schema.NewRitual("Summon Invoker", "summon-invoker", "Spend mana to summon a new invoker, who can be used to help generate even more mana.", 600)
+	default:
+		// Fail case - no ritual found
+		responses.SendRes(w, responses.No_Such_Ritual, nil, "")
 	}
-	//* Placeholder/
-	getUserJsonString, getUserJsonStringErr := responses.JSON(userData)
-	if getUserJsonStringErr != nil {
-		log.Error.Printf("Error in GetRitualInfo, could not format thisUser as JSON. userData: %v, error: %v", userData, getUserJsonStringErr)
-	}
-	log.Debug.Printf("Sending response for GetRitualInfo:\n%v", getUserJsonString)
-	responses.SendRes(w, responses.Generic_Success, userData, "")
-	//*/
+	// Success case
+	responses.SendRes(w, responses.Generic_Success, responseData, "")
 	log.Debug.Println(log.Cyan("-- End GetRitualInfo --"))
 }
 
 // Handler function for the secure route: POST /api/v0/my/rituals/summon-invoker
 func NewInvoker(w http.ResponseWriter, r *http.Request) {
-	manaCost := 600.0
 	log.Debug.Println(log.Yellow("-- NewInvoker --"))
 	OK, userData, udb, _ := secureGetUser(w, r)
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success, newManaValue := gamelogic.TryManaPurchase(w, userData.Mana, manaCost)
+	success, newManaValue := gamelogic.TryManaPurchase(w, userData.Mana, 600)
 	if !success {
 		return // Failure states handled by TryManaPurchase, simply return
 	}

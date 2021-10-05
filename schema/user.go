@@ -17,6 +17,7 @@ type User struct {
 	ManaDetails
 	Golems []Golem `json:"golems" binding:"required"`
 	Inventory []LocationInventory `json:"inventory" binding:"required"`
+	KnownRituals []Ritual `json:"known-rituals" binding:"required"`
 }
 
 // Defines the public User info for the /users/{username} endpoint
@@ -53,11 +54,12 @@ func NewUser(token string, username string) User {
 		ManaDetails: ManaDetails{
 			Mana: 3600.0,
 			ManaCap: 21600.0,
-			ManaRegen: 60.0,
+			ManaRegen: 1.0,
 			LastManaTick: time.Now().Unix(),
 		},
 		Golems: make([]Golem, 0),
 		Inventory: make([]LocationInventory, 0),
+		KnownRituals: []Ritual{NewRitual("Summon Invoker", "summon-invoker", "Spend mana to summon a new invoker, who can be used to help generate even more mana.", 600)},
 	}
 }
 

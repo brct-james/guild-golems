@@ -37,6 +37,7 @@ const (
 	No_AuthPair_Context ResponseCode = 11
 	User_Not_Found ResponseCode = 12
 	Not_Enough_Mana ResponseCode = 13
+	No_Such_Ritual ResponseCode = 14
 )
 
 // Defines Response structure for output
@@ -85,6 +86,8 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[User_Not_Found] User not found!"
 	case 13:
 		message = "[Not_Enough_Mana] Could not complete requested action due to insufficient mana"
+	case 14:
+		message = "[No_Such_Ritual] The specified ritual is not recognized"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}
