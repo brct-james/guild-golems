@@ -51,13 +51,6 @@ func ApiSelection(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handler function for the route: /api/v0
-func V0Docs(w http.ResponseWriter, r *http.Request) {
-	log.Debug.Println(log.Yellow("-- v0Docs --"))
-	responses.SendRes(w, responses.Unimplemented, nil, "v0Docs")
-	log.Debug.Println(log.Cyan("-- End v0Docs --"))
-}
-
-// Handler function for the route: /api/v0/status
 func V0Status(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- v0Status --"))
 	responses.SendRes(w, responses.Unimplemented, nil, "v0Status")
