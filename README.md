@@ -17,49 +17,19 @@ Go-based server for a fantasy-themed guild management game
 
 ### Endpoints
 
-- `GET: api/v0/locations` returns entire world json from DB
+- `GET: /api/v0/locations` returns entire world json from DB
 - `POST: /api/v0/users/{username}/claim` attempts to claim the specified username, returns the user data after creation, including token which users must save to access private routes
 - `GET: /api/v0/users/{username}` returns the public user data
 - `GET: /api/v0/my/account` returns the private user data (includes token)
+- `GET: /api/v0/my/invokers` list all invoker golems owned
+- `GET: /api/v0/my/rituals` list all known rituals
+- `GET: /api/v0/my/rituals/{ritual}` show information on a particular ritual
+- `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
+- - `summon-invoker` Spend mana to summon a new invoker, who can be used to help generate even more mana.
 
 ### Response Codes
 
-```golang
-case -3:
-  message = "[CRITICAL_JSON_MARSHAL_ERROR] Server error in responses.JSON, could not marshal JSON_Marshal_Error response! PLEASE contact developer."
-case -2:
-  message = "[JSON_Marshal_Error] Responses module encountered an error while marshaling response JSON. Please contact developer."
-case -1:
-  message = "[Unimplemented] Unimplemented Feature. You shouldn't be able to hit this on the live build... Please contact developer"
-case 0:
-  message = "[Generic_Failure] Contact developer"
-case 1:
-  message = "[Generic_Success] Request Successful"
-case 2:
-  message = "[Auth_Failure] Token was invalid or missing from request. Did you confirm sending the token as an authorization header?"
-case 3:
-  message = "[Username_Validation_Failure] Please ensure username conforms to requirements and account does not already exist!"
-case 4:
-  message = "[DB_Save_Failure] Failed to save to DB"
-case 5:
-  message = "[Generate_Token_Failure] Username passed initial validation but could not generate token, contact Admin."
-case 6:
-  message = "[WDB_Get_Failure] Could not get from world DB"
-case 7:
-  message = "[UDB_Get_Failure] Could not get from user DB"
-case 8:
-  message = "[JSON_Unmarshal_Error] Error while attempting to unmarshal JSON from DB"
-case 9:
-  message = "[No_WDB_Context] Could not get WDB context from middleware"
-case 10:
-  message = "[No_UDB_Context] Could not get UDB context from middleware"
-case 11:
-  message = "[No_AuthPair_Context] Failed to get AuthPair context from middleware"
-case 12:
-  message = "[User_Not_Found] User not found!"
-default:
-  message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
-```
+See `responses.go`
 
 ## Roadmap
 

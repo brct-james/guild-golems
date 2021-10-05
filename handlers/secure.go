@@ -99,7 +99,7 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 		return false, schema.User{}, rdb.Database{}, auth.ValidationPair{}
 	}
 	// Success case
-	thisUser.Mana = gamelogic.CalculateManaRegen(thisUser)
+	thisUser = gamelogic.CalculateManaRegen(thisUser)
 	return true, thisUser, udb, userInfo
 }
 
