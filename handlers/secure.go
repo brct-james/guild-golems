@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/brct-james/brct-game/auth"
-	"github.com/brct-james/brct-game/log"
-	"github.com/brct-james/brct-game/rdb"
-	"github.com/brct-james/brct-game/responses"
-	"github.com/brct-james/brct-game/schema"
+	"github.com/brct-james/guild-golems/auth"
+	"github.com/brct-james/guild-golems/log"
+	"github.com/brct-james/guild-golems/rdb"
+	"github.com/brct-james/guild-golems/responses"
+	"github.com/brct-james/guild-golems/schema"
 )
 
 // ENUM for handler context

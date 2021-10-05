@@ -9,10 +9,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/brct-james/brct-game/log"
-	"github.com/brct-james/brct-game/rdb"
-	"github.com/brct-james/brct-game/responses"
-	"github.com/brct-james/brct-game/schema"
+	"github.com/brct-james/guild-golems/log"
+	"github.com/brct-james/guild-golems/rdb"
+	"github.com/brct-james/guild-golems/responses"
+	"github.com/brct-james/guild-golems/schema"
 	"github.com/golang-jwt/jwt"
 )
 

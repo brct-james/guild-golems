@@ -1,10 +1,16 @@
-# brct-game
+# guild-golems
 
-Go-based server for a fantasy-themed alchemy game
+Go-based server for a fantasy-themed guild management game
 
 ## Features
 
-- Register a username and get your public user info ~~as well as the secure `/my/account` endpoint~~
+- Basic account functionality
+- - Claim Account: `POST: https://guildgolems.io/api/v0/users/{username}/claim`
+- - - Don't forget to save the token from the response to your claim request. You must use this as a bearer token in the auth header for secure `/my/` routes
+- - - Must include only letters, numbers, `-`, and `_`.
+- - Get public user info at `/api/v0/users/{username}` and get private user info including token at `/api/v0/my/account`
+- Basic location info
+- - Get world json: `GET: https://guildgolems.io/api/v0/locations`
 
 ### Endpoints
 
@@ -152,19 +158,19 @@ default:
 
 ## Build & Run
 
-Ensure resjon container is running on the correct port: `docker run -di -p 6381:6379 --name rejson_brct-game redislabs/rejson:latest`
+Ensure resjon container is running on the correct port: `docker run -di -p 6380:6379 --name rejson_guild-golems redislabs/rejson:latest`
 
 For the first run, ensure `refreshAuthSecret` in `main.go` is true. Make sure to set this to false for second run.
 
-Build and start with `go build; ./brct-game`. Alternatively, `go run main.go`
+Build and start with `go build; ./guild-golems`. Alternatively, `go run main.go`
 
-Listens on port `50235`
+Listens on port `50242`
 
-redis-cli via `redis-cli -p 6381`
+redis-cli via `redis-cli -p 6380`
 
 `FLUSHDB` for each database (`select #`)
 
-Recommend running with screen `screen -S brct-game`. If get detached, can forcibly detach the old ssh session and reattach with `screen -Dr brct-game`
+Recommend running with screen `screen -S guild-golems`. If get detached, can forcibly detach the old ssh session and reattach with `screen -Dr guild-golems`
 
 ## Changelog
 

@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/brct-james/brct-game/filemngr"
-	"github.com/brct-james/brct-game/log"
+	"github.com/brct-james/guild-golems/filemngr"
+	"github.com/brct-james/guild-golems/log"
 
 	"github.com/joho/godotenv"
 )

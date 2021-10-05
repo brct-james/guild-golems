@@ -6,19 +6,19 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/brct-james/brct-game/auth"
-	"github.com/brct-james/brct-game/filemngr"
-	"github.com/brct-james/brct-game/handlers"
-	"github.com/brct-james/brct-game/log"
-	"github.com/brct-james/brct-game/rdb"
-	"github.com/brct-james/brct-game/schema"
+	"github.com/brct-james/guild-golems/auth"
+	"github.com/brct-james/guild-golems/filemngr"
+	"github.com/brct-james/guild-golems/handlers"
+	"github.com/brct-james/guild-golems/log"
+	"github.com/brct-james/guild-golems/rdb"
+	"github.com/brct-james/guild-golems/schema"
 	"github.com/gorilla/mux"
 )
 
 // Configuration
 
-var reloadWorldFromJSON bool = false
-var refreshAuthSecret bool = false
+var reloadWorldFromJSON bool = true
+var refreshAuthSecret bool = true
 var flushUDB bool = false
 
 var worldJSONPath string = "./v0_world.json"
@@ -33,8 +33,8 @@ var dbMap = map[string]int{
 
 var apiVersion string = "v0.0.1"
 var (
-	ListenPort = ":50235"
-	RedisAddr = "localhost:6381"
+	ListenPort = ":50242"
+	RedisAddr = "localhost:6380"
 )
 
 var userDatabase rdb.Database
@@ -42,7 +42,7 @@ var worldDatabase rdb.Database
 
 // Main
 func main() {
-	log.Info.Printf("Brct-Game Rest API Server %s", apiVersion)
+	log.Info.Printf("Guild-Golems Rest API Server %s", apiVersion)
 	log.Info.Printf("Connecting to Redis DB")
 	
 	userDatabase = rdb.NewDatabase(RedisAddr, dbMap["users"])

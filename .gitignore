@@ -15,7 +15,7 @@
 secrets.env
 
 # Ignore built binary
-brct-game
+guild-golems
 
 # Debug Log (ansi format)
 debug.ansi

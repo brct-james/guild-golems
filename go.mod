@@ -1,4 +1,4 @@
-module github.com/brct-james/brct-game
+module github.com/brct-james/guild-golems
 
 go 1.17
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/brct-james/brct-game/log"
+	"github.com/brct-james/guild-golems/log"
 	goredis "github.com/go-redis/redis/v8"
 	rejson "github.com/nitishm/go-rejson/v4"
 )

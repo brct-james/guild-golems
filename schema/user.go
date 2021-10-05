@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/brct-james/brct-game/log"
-	"github.com/brct-james/brct-game/rdb"
+	"github.com/brct-james/guild-golems/log"
+	"github.com/brct-james/guild-golems/rdb"
 )
 
 // Defines a user which has Name, Symbol, Description

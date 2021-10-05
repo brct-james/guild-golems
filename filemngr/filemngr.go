@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/brct-james/brct-game/log"
+	"github.com/brct-james/guild-golems/log"
 )
 
 // Ensure file exists, if not create it

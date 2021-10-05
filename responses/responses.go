@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/brct-james/brct-game/log"
+	"github.com/brct-james/guild-golems/log"
 )
 
 // Prettifies input into json string for output
