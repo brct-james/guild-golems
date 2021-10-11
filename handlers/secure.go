@@ -104,8 +104,25 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 	return true, thisUser, udb, userInfo
 }
 
+// Check user data for ritual in list of known rituals
+func doesUserKnowRitual(userData schema.User, ritualKey string) (bool) {
+	for _, ritual := range userData.KnownRituals {
+		if strings.EqualFold(ritual, ritualKey) {
+			// success state - user knows ritual
+			return true
+		}
+	}
+	// fail state - user doesnt know ritual
+	return false
+}
+
 // Create new golem for user in database, if able, of particular archetype
-func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database, userData schema.User, archetype string) (bool) {
+func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database, userData schema.User, archetype string, ritualName string) (bool) {
+	knowsRitual := doesUserKnowRitual(userData, ritualName)
+	if !knowsRitual {
+		responses.SendRes(w, responses.Ritual_Not_Known, nil, "")
+		return false
+	}
 	success, newManaValue := gamelogic.TryManaPurchase(w, userData.Mana, 600)
 	if !success {
 		return false // Failure states handled by TryManaPurchase, return false for failure
@@ -142,6 +159,15 @@ func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database
 	return true
 }
 
+// Remove trailing s if one exists
+func trimTrailingS(input string) (string) {
+	size := len(input)
+	if size > 0 && input[size-1] == 's' {
+		return input[:size-1]
+	}
+	return input
+}
+
 // HANDLER FUNCTIONS
 
 // Handler function for the secure route: /api/v0/my/account
@@ -171,21 +197,23 @@ func GetGolems(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End GetGolems --"))
 }
 
-// Handler function for the secure route: GET /api/v0/my/invokers
-func GetInvokers(w http.ResponseWriter, r *http.Request) {
-	log.Debug.Println(log.Yellow("-- GetInvokers --"))
+// Handler function for the secure route: GET /api/v0/my/golems/{archetype}
+func GetGolemsByArchetype(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- GetGolemsByArchetype --"))
+	route_vars := mux.Vars(r)
+	archetype := trimTrailingS(route_vars["archetype"])
 	OK, userData, _, _ := secureGetUser(w, r)
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	invokers := schema.FilterGolemListByArchetype(userData.Golems, "invoker")
-	getInvokerJsonString, getInvokerJsonStringErr := responses.JSON(invokers)
-	if getInvokerJsonStringErr != nil {
-		log.Error.Printf("Error in GetInvokers, could not format invokers as JSON. invokers: %v, error: %v", userData, getInvokerJsonStringErr)
-	}
-	log.Debug.Printf("Sending response for GetInvokers:\n%v", getInvokerJsonString)
-	responses.SendRes(w, responses.Generic_Success, invokers, "")
-	log.Debug.Println(log.Cyan("-- End GetInvokers --"))
+	filteredList := schema.FilterGolemListByArchetype(userData.Golems, archetype)
+	// getInvokerJsonString, getInvokerJsonStringErr := responses.JSON(filteredList)
+	// if getInvokerJsonStringErr != nil {
+	// 	log.Error.Printf("Error in GetInvGetGolemsByArchetypeokers, could not format invokers as JSON. invokers: %v, error: %v", userData, getInvokerJsonStringErr)
+	// }
+	// log.Debug.Printf("Sending response for GetGolemsByArchetype:\n%v", getInvokerJsonString)
+	responses.SendRes(w, responses.Generic_Success, filteredList, "")
+	log.Debug.Println(log.Cyan("-- End GetGolemsByArchetype --"))
 }
 
 // Handler function for the secure route: GET /api/v0/my/golems/info/{symbol}
@@ -239,7 +267,11 @@ func ListRituals(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	responses.SendRes(w, responses.Generic_Success, userData.KnownRituals, "")
+	var responseData []schema.Ritual
+	for _, ritual := range userData.KnownRituals {
+		responseData = append(responseData, schema.Rituals[ritual])
+	}
+	responses.SendRes(w, responses.Generic_Success, responseData, "")
 	log.Debug.Println(log.Cyan("-- End ListRituals --"))
 }
 
@@ -249,13 +281,19 @@ func GetRitualInfo(w http.ResponseWriter, r *http.Request) {
 	// Get ritual from route
 	route_vars := mux.Vars(r)
 	ritual := route_vars["ritual"]
-	var responseData schema.Ritual
-	switch ritual {
-	case "summon-invoker":
-		responseData = schema.NewRitual("Summon Invoker", "summon-invoker", "Spend mana to summon a new invoker, who can be used to help generate even more mana.", 600)
-	default:
+	OK, userData, _, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	responseData, ok := schema.Rituals[ritual]
+	if !ok {
 		// Fail case - no ritual found
 		responses.SendRes(w, responses.No_Such_Ritual, nil, "")
+	}
+	knowsRitual := doesUserKnowRitual(userData, ritual)
+	if !knowsRitual {
+		responses.SendRes(w, responses.Ritual_Not_Known, nil, "")
+		return
 	}
 	// Success case
 	responses.SendRes(w, responses.Generic_Success, responseData, "")
@@ -269,7 +307,7 @@ func NewInvoker(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success := createNewGolemInDB(w, r, udb, userData, "invoker")
+	success := createNewGolemInDB(w, r, udb, userData, "invoker", "summon-invoker")
 	if !success {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}
@@ -283,7 +321,7 @@ func NewHarvester(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success := createNewGolemInDB(w, r, udb, userData, "harvester")
+	success := createNewGolemInDB(w, r, udb, userData, "harvester", "summon-harvester")
 	if !success {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}

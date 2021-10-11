@@ -22,12 +22,13 @@ Go-based server for a fantasy-themed guild management game
 - `GET: /api/v0/users/{username}` returns the public user data
 - `GET: /api/v0/my/account` returns the private user data (includes token)
 - `GET: /api/v0/my/golems` list all golems owned
-- `GET: /api/v0/my/golems/invokers` list all invoker golems owned
+- `GET: /api/v0/my/golems/{archetype}` list all golems owned filtered by archetype
 - `GET: /api/v0/my/golem/{symbol}` get info on the specified golem
 - `GET: /api/v0/my/rituals` list all known rituals
 - `GET: /api/v0/my/rituals/{ritual}` show information on a particular ritual
 - `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
 - - `summon-invoker` Spend mana to summon a new invoker, who can be used to help generate even more mana.
+- - `summon-harvester` Spend mana to summon a new harvester, who can be used to gather resources from nodes in the world.
 
 ### Response Codes
 
@@ -37,8 +38,10 @@ See `responses.go`
 
 ### In-Progress
 
-- - `.../my/harvesters` collecting free resources from nodes
-- - - v0: simply collecting X resource at location taking Y time
+- Golem traveling
+- Changing golem status
+- Harvesters collecting free resources from nodes
+- - v0: simply collecting X resource at location taking Y time
 
 ### Planned: v0.1 MVP
 
@@ -166,13 +169,16 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - Golems v0
 - - Golems are created via rituals
 - - `GET ../my/golems` list golems
-- - - `GET.../my/golems/invokers` list invokers
+- - - `GET.../my/golems/{archetype}` list golems filtered by archetype
 - - `../my/golem/{symbol}` get info on and manage individual golems
 - - - `GET` gives info on the specified invoker
 - Rituals v0
 - - `GET .../my/rituals` list rituals
 - - - `POST .../my/rituals/summon-invoker` create new invoker
-- - - `GET .../my/rituals/summon-invoker` information on the given ritual
+- - - `GET .../my/rituals/summon-invoker` information on the invoker summoning ritual
+- - - `POST .../my/rituals/summon-harvester` create new harvester
+- - - `GET .../my/rituals/summon-harvester` information on the harvester summoning ritual
+- - User holds list of ritual keys rather than list of rituals themselves
 - Implemented the basics of the mana system and regeneration
 
 ### v0.0.1
