@@ -1,7 +1,11 @@
 // Package schema defines database and JSON schema as structs, as well as functions for creating and using these structs
 package schema
 
-import "strings"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 // Defines a user which has Name, Symbol, Description
 type Golem struct {
@@ -11,17 +15,40 @@ type Golem struct {
 	Status string `json:"status" binding:"required"`
 }
 
+// golem statuses map
+type GolemStatus struct {
+	Name string `json:"name" binding:"required"`
+	IsBlocking bool `json:"is-blocking" binding:"required"`
+}
+var GolemStatuses = map[string]GolemStatus {
+	"idle": {Name:"Idle", IsBlocking: false},
+	"harvesting": {Name:"Harvesting", IsBlocking: false},
+	"traveling": {Name:"Traveling", IsBlocking: true},
+	"invoking": {Name:"Invoking", IsBlocking: true},
+}
+
 // golem archetypes and abbreviations map
 type GolemArchetype struct {
 	Name string `json:"name" binding:"required"`
 	Abbreviation string `json:"abbreviation" binding:"required"`
+	AllowedStatuses []string `json:"allowed-statuses" binding:"required"`
 }
 var GolemArchetypes = map[string]GolemArchetype {
-	"invoker": {Name:"Invoker", Abbreviation:"INV"},
-	"harvester": {Name:"Harvester", Abbreviation:"HRV"},
-	"courier": {Name:"Courier", Abbreviation:"COR"},
-	"artisan": {Name:"Artisan", Abbreviation:"ART"},
-	"merchant": {Name:"Merchant", Abbreviation:"MRC"},
+	"invoker": {Name:"Invoker", Abbreviation:"INV",
+		AllowedStatuses: []string{"idle", "invoking"},
+	},
+	"harvester": {Name:"Harvester", Abbreviation:"HRV",
+		AllowedStatuses: []string{"idle", "traveling", "harvesting"},
+	},
+	"courier": {Name:"Courier", Abbreviation:"COR",
+		AllowedStatuses: []string{"idle", "traveling"},
+	},
+	"artisan": {Name:"Artisan", Abbreviation:"ART",
+		AllowedStatuses: []string{"idle", "traveling"},
+	},
+	"merchant": {Name:"Merchant", Abbreviation:"MRC",
+		AllowedStatuses: []string{"idle", "traveling"},
+	},
 }
 
 
@@ -33,15 +60,32 @@ var GolemArchetypes = map[string]GolemArchetype {
 // 	LastEnergyTick int64 `json:"last-energy-tick" binding:"required"`
 // }
 
-func NewGolem(symbol string, archetype string) Golem {
+func NewGolem(symbol string, archetype string, startingStatus string) Golem {
 	return Golem{
 		HasSymbol: HasSymbol{
 			Symbol: symbol,
 		},
 		Archetype: archetype,
 		LocationSymbol: "A-G",
-		Status: "idle",
+		Status: startingStatus,
 	}
+}
+
+func IsStatusAllowedForArchetype(archetype string, newStatus string) (bool, error) {
+	archetypeInfo, ok := GolemArchetypes[archetype]
+	if !ok {
+		// Fail case - golem archetype not in list of valid statuses
+		resMsg1 := fmt.Sprintf("Specified archetype %s not in list of valid archetypes", archetype)
+		return false, errors.New(resMsg1)
+	}
+	for _, status := range archetypeInfo.AllowedStatuses {
+		if strings.EqualFold(status, newStatus) {
+			// Success case, archetype is allowed
+			return true, nil
+		}
+	}
+	// Fail case, archetype not allowed
+	return false, nil
 }
 
 func DoesGolemArchetypeMatch(golem Golem, archetype string) bool {
@@ -56,4 +100,13 @@ func FilterGolemListByArchetype(golems []Golem, archetype string) []Golem {
 		}
 	}
 	return filteredList
+}
+
+func FindIndexOfGolemWithSymbol(golems []Golem, symbol string) (bool, int) {
+	for i := range golems {
+		if strings.EqualFold(golems[i].Symbol, symbol) {
+			return true, i
+		}
+	}
+	return false, -1
 }

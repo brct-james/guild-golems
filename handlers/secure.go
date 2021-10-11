@@ -117,7 +117,7 @@ func doesUserKnowRitual(userData schema.User, ritualKey string) (bool) {
 }
 
 // Create new golem for user in database, if able, of particular archetype
-func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database, userData schema.User, archetype string, ritualName string) (bool) {
+func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database, userData schema.User, archetype string, ritualName string, startingStatus string) (bool) {
 	knowsRitual := doesUserKnowRitual(userData, ritualName)
 	if !knowsRitual {
 		responses.SendRes(w, responses.Ritual_Not_Known, nil, "")
@@ -143,7 +143,7 @@ func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database
 	var newGolemId int = len(schema.FilterGolemListByArchetype(userData.Golems, archetype))
 	
 	newGolemSymbol := fmt.Sprintf("%s-%d", schema.GolemArchetypes[archetype].Abbreviation, newGolemId)
-	newGolem := schema.NewGolem(newGolemSymbol, archetype)
+	newGolem := schema.NewGolem(newGolemSymbol, archetype, startingStatus)
 	userData.Golems = append(userData.Golems, newGolem)
 	saveUserErr := SaveUserToDB(udb, userData.Token, userData)
 	if saveUserErr != nil {
@@ -238,28 +238,6 @@ func GolemInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End InvokerInfo --"))
 }
 
-// Handler function for the secure route: PUT /api/v0/my/invokers/{symbol}
-// func ChangeInvokerTask(w http.ResponseWriter, r *http.Request) {
-// 	log.Debug.Println(log.Yellow("-- ChangeInvokerTask --"))
-// 	route_vars := mux.Vars(r)
-// 	symbol := route_vars["symbol"]
-// 	OK, userData, _, _ := secureGetUser(w, r)
-// 	if !OK {
-// 		return // Failure states handled by secureGetUser, simply return
-// 	}
-// 	// Find golem with symbol
-// 	for i := range userData.Golems {
-// 		if strings.EqualFold(userData.Golems[i].Symbol, symbol) {
-// 			// Found
-// 			responses.SendRes(w, responses.Generic_Success, userData.Golems[i], "")
-// 			return
-// 		}
-// 	}
-// 	// Not found
-// 	responses.SendRes(w, responses.No_Golem_Found, nil, "")
-// 	log.Debug.Println(log.Cyan("-- End ChangeInvokerTask --"))
-// }
-
 // Handler function for the secure route: GET /api/v0/my/rituals
 func ListRituals(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- ListRituals --"))
@@ -307,7 +285,7 @@ func NewInvoker(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success := createNewGolemInDB(w, r, udb, userData, "invoker", "summon-invoker")
+	success := createNewGolemInDB(w, r, udb, userData, "invoker", "summon-invoker", "invoking")
 	if !success {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}
@@ -321,9 +299,78 @@ func NewHarvester(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success := createNewGolemInDB(w, r, udb, userData, "harvester", "summon-harvester")
+	success := createNewGolemInDB(w, r, udb, userData, "harvester", "summon-harvester", "idle")
 	if !success {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}
 	log.Debug.Println(log.Cyan("-- End NewHarvester --"))
+}
+
+// Handler function for the secure route: PUT /api/v0/my/invokers/{symbol}
+func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- ChangeGolemTask --"))
+	route_vars := mux.Vars(r)
+	symbol := route_vars["symbol"]
+	OK, userData, _, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	// Find golem with symbol
+	found, golemIndex := schema.FindIndexOfGolemWithSymbol(userData.Golems, symbol)
+	if !found {
+		// Not Found
+		responses.SendRes(w, responses.No_Golem_Found, nil, "")
+		return
+	}
+	currentStatus := userData.Golems[golemIndex].Status
+	archetype := userData.Golems[golemIndex].Archetype
+	// Found golem, check that not in blocking status
+	statusInfo, ok := schema.GolemStatuses[currentStatus]
+	if !ok {
+		// Fail case - golem status not in list of valid statuses
+		resMsg1 := fmt.Sprintf("in ChangeGolemTask, golem status %s not in list of valid statuses", currentStatus)
+		responses.SendRes(w, responses.Generic_Failure, nil, resMsg1)
+		return
+	}
+	// Sucess case - golem statusInfo gotten successfully
+	if statusInfo.IsBlocking {
+		// Cannot change status, is in blocking status
+		responses.SendRes(w, responses.Golem_In_Blocking_Status, nil, "")
+		return
+	}
+	
+	// Get info on status change from request body
+	//TODO: this
+	var newStatus string = "idle" //TODO: should get from body
+
+	// Check that new status in list of AllowedStatuses for archetype
+	isAllowed, archetypeErr := schema.IsStatusAllowedForArchetype(archetype, newStatus)
+	if archetypeErr != nil {
+		// Fail state, error while checking for allowed
+		responses.SendRes(w, responses.Generic_Failure, nil, "Internal server error occurred while checking if new status was allowed for specified golem's archetype")
+		log.Error.Printf("in ChangeGolemTask encountered error: %v", archetypeErr)
+		return
+	}
+	if !isAllowed {
+		// Fail state, new status not allowed
+		responses.SendRes(w, responses.New_Status_Not_Allowed, nil, "")
+		return
+	}
+	// Success state, new status is allowed, complete changes based on request body
+	//TODO: this
+	switch newStatus {
+	case "idle":
+		//TODO: this
+	case "harvesting":
+		//TODO: this
+	case "traveling":
+		//TODO: this
+	case "invoking":
+		//TODO: this
+	default:
+		// Error state, newStatus passed validation but not caught by switch statement
+		//TODO: this
+	}
+	responses.SendRes(w, responses.Generic_Success, userData.Golems[golemIndex], "")
+	log.Debug.Println(log.Cyan("-- End ChangeGolemTask --"))
 }

@@ -40,6 +40,9 @@ const (
 	No_Such_Ritual ResponseCode = 14
 	No_Golem_Found ResponseCode = 15
 	Ritual_Not_Known ResponseCode = 16
+	No_Such_Status ResponseCode = 17
+	Golem_In_Blocking_Status ResponseCode = 18
+	New_Status_Not_Allowed ResponseCode = 19
 )
 
 // Defines Response structure for output
@@ -94,6 +97,12 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[No_Golem_Found] Golem with the specified symbol could not be found in user data"
 	case 16:
 		message = "[Ritual_Not_Known] User does not know the specified ritual, so it cannot be executed"
+	case 17:
+		message = "[No_Such_Status] Specified status does not exist"
+	case 18:
+		message = "[Golem_In_Blocking_Status] Golem's current status does not allow changes to be made"
+	case 19:
+		message = "[New_Status_Not_Allowed] Specified status is not valid for the specified golem's archetype"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

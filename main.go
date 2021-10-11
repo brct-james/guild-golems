@@ -125,7 +125,7 @@ func handleRequests() {
 	secure.HandleFunc("/golems", handlers.GetGolems).Methods("GET")
 	secure.HandleFunc("/golems/{archetype}", handlers.GetGolemsByArchetype).Methods("GET")
 	secure.HandleFunc("/golem/{symbol}", handlers.GolemInfo).Methods("GET")
-	// secure.HandleFunc("/invokers/{symbol}", handlers.ChangeInvokerTask).Methods("PUT")
+	secure.HandleFunc("/golem/{symbol}", handlers.ChangeGolemTask).Methods("PUT")
 	secure.HandleFunc("/rituals", handlers.ListRituals).Methods("GET")
 	secure.HandleFunc("/rituals/{ritual}", handlers.GetRitualInfo).Methods("GET")
 	secure.HandleFunc("/rituals/summon-invoker", handlers.NewInvoker).Methods("POST")

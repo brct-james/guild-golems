@@ -38,6 +38,7 @@ See `responses.go`
 
 ### In-Progress
 
+- [In-Progress] secure.go:343 Get info on status change from request body
 - Golem traveling
 - Changing golem status
 - Harvesters collecting free resources from nodes
@@ -122,6 +123,10 @@ See `responses.go`
 
 ### Planned: Unscheduled
 
+- Rituals v1
+- - Specify a location for the ritual
+- - Specify a number of repetitions for the ritual (batch calling)
+- - Revisit invokers, rituals should require X amount of invokers at the location to work
 - Performance monitoring to see what calls are expensive as well as what are most used to see where to focus optimization or streamlining
 - `/ui` routes for each endpoint that work for players who don't want to use the api
 - - `/ui` page with a guide/tutorial
@@ -145,6 +150,7 @@ See `responses.go`
 - - thus only one worker is ever going to be accessing any given portion of the DB at once
 - rather than just calling CalculateManaRegen in secureGetUser, use a GetMana function that is only called when absolutely necessary - right now these are identical solutions but in the future other things will use secureGetUser that have nothing to do with mana
 - - Also would need a flushUserUpdates or something like that for things like `/my/account` which need everything up to date
+- Productionalize parsing json body: [link](https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body)
 
 ## Build & Run
 
