@@ -104,6 +104,44 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 	return true, thisUser, udb, userInfo
 }
 
+// Create new golem for user in database, if able, of particular archetype
+func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database, userData schema.User, archetype string) (bool) {
+	success, newManaValue := gamelogic.TryManaPurchase(w, userData.Mana, 600)
+	if !success {
+		return false // Failure states handled by TryManaPurchase, return false for failure
+	}
+	userData.Mana = newManaValue
+	// // At this time not able to delete or lose golems so using len() on filtered list of golems is fine
+	// var sameArchetypeGolemIds []int
+	// for _, golem := range schema.FilterGolemListByArchetype(userData.Golems, archetype) {
+	// 	golemId, err := strconv.Atoi(strings.Split(golem.Symbol, "-")[1])
+	// 	if err != nil {
+	// 		// Failure state - could not convert id from string to int
+	// 		responses.SendRes(w, responses.Generic_Failure, nil, "Internal server error in createNewGolemInDB")
+	// 		return false
+	// 	}
+	// 	sameArchetypeGolemIds = append(sameArchetypeGolemIds, golemId)
+	// }
+	// // todo: sort and use ids[-1]+1 for newGolemId
+	var newGolemId int = len(schema.FilterGolemListByArchetype(userData.Golems, archetype))
+	
+	newGolemSymbol := fmt.Sprintf("%s-%d", schema.GolemArchetypes[archetype].Abbreviation, newGolemId)
+	newGolem := schema.NewGolem(newGolemSymbol, archetype)
+	userData.Golems = append(userData.Golems, newGolem)
+	saveUserErr := SaveUserToDB(udb, userData.Token, userData)
+	if saveUserErr != nil {
+		// fail state - could not save
+		saveUserErrMsg := fmt.Sprintf("in createNewGolemInDB | Username: %v | SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
+		log.Debug.Println(saveUserErrMsg)
+		responses.SendRes(w, responses.DB_Save_Failure, nil, saveUserErrMsg)
+		return false
+	}
+	// Updated successfully
+	log.Debug.Printf("Spawned new %s golem for username %s", archetype, userData.Username)
+	responses.SendRes(w, responses.Generic_Success, newGolem, "")
+	return true
+}
+
 // HANDLER FUNCTIONS
 
 // Handler function for the secure route: /api/v0/my/account
@@ -231,24 +269,23 @@ func NewInvoker(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success, newManaValue := gamelogic.TryManaPurchase(w, userData.Mana, 600)
+	success := createNewGolemInDB(w, r, udb, userData, "invoker")
 	if !success {
-		return // Failure states handled by TryManaPurchase, simply return
+		return // Failure states handled by createNewGolemInDB, simply return
 	}
-	userData.Mana = newManaValue
-	invokers := schema.FilterGolemListByArchetype(userData.Golems, "invoker")
-	newGolem := schema.NewGolem(fmt.Sprintf("INV-%v", len(invokers)), "invoker")
-	userData.Golems = append(userData.Golems, newGolem)
-	saveUserErr := SaveUserToDB(udb, userData.Token, userData)
-	if saveUserErr != nil {
-		// fail state - could not save
-		saveUserErrMsg := fmt.Sprintf("in NewInvoker | Username: %v | SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
-		log.Debug.Println(saveUserErrMsg)
-		responses.SendRes(w, responses.DB_Save_Failure, nil, saveUserErrMsg)
-		return
-	}
-	// Updated successfully
-	log.Debug.Printf("Spawned new invoker for username %s", userData.Username)
-	responses.SendRes(w, responses.Generic_Success, newGolem, "")
 	log.Debug.Println(log.Cyan("-- End NewInvoker --"))
+}
+
+// Handler function for the secure route: POST /api/v0/my/rituals/summon-harvester
+func NewHarvester(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- NewHarvester --"))
+	OK, userData, udb, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	success := createNewGolemInDB(w, r, udb, userData, "harvester")
+	if !success {
+		return // Failure states handled by createNewGolemInDB, simply return
+	}
+	log.Debug.Println(log.Cyan("-- End NewHarvester --"))
 }

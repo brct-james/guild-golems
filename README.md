@@ -37,7 +37,8 @@ See `responses.go`
 
 ### In-Progress
 
-- Nothing
+- - `.../my/harvesters` collecting free resources from nodes
+- - - v0: simply collecting X resource at location taking Y time
 
 ### Planned: v0.1 MVP
 
@@ -95,8 +96,6 @@ See `responses.go`
 
 - `.../achievements` info on each achievement like name, description/criteria, list of players with it, etc.
 - for v0 give each task its own endpoint, may re-evaluate this structure later
-- - `.../my/harvesters` collecting free resources from nodes
-- - - v0: simply collecting X resource at location taking Y time
 - - `.../my/couriers` transporting materials between two locations
 - - - v0: simply moving resources between locations, based on a set speed and capacity
 - - `.../my/artisans` converting resources into products

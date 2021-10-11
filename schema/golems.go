@@ -1,6 +1,8 @@
 // Package schema defines database and JSON schema as structs, as well as functions for creating and using these structs
 package schema
 
+import "strings"
+
 // Defines a user which has Name, Symbol, Description
 type Golem struct {
 	HasSymbol
@@ -8,6 +10,20 @@ type Golem struct {
 	LocationSymbol string `json:"location-symbol" binding:"required"` 
 	Status string `json:"status" binding:"required"`
 }
+
+// golem archetypes and abbreviations map
+type GolemArchetype struct {
+	Name string `json:"name" binding:"required"`
+	Abbreviation string `json:"abbreviation" binding:"required"`
+}
+var GolemArchetypes = map[string]GolemArchetype {
+	"invoker": {Name:"Invoker", Abbreviation:"INV"},
+	"harvester": {Name:"Harvester", Abbreviation:"HRV"},
+	"courier": {Name:"Courier", Abbreviation:"COR"},
+	"artisan": {Name:"Artisan", Abbreviation:"ART"},
+	"merchant": {Name:"Merchant", Abbreviation:"MRC"},
+}
+
 
 // Defines the schema for EnergyDetails - a struct containing information on golem energy
 // type EnergyDetails struct {
@@ -29,7 +45,7 @@ func NewGolem(symbol string, archetype string) Golem {
 }
 
 func DoesGolemArchetypeMatch(golem Golem, archetype string) bool {
-	return golem.Archetype == archetype
+	return strings.EqualFold(golem.Archetype, archetype)
 }
 
 func FilterGolemListByArchetype(golems []Golem, archetype string) []Golem {
