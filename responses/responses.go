@@ -38,6 +38,7 @@ const (
 	User_Not_Found ResponseCode = 12
 	Not_Enough_Mana ResponseCode = 13
 	No_Such_Ritual ResponseCode = 14
+	No_Golem_Found ResponseCode = 15
 )
 
 // Defines Response structure for output
@@ -88,6 +89,8 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[Not_Enough_Mana] Could not complete requested action due to insufficient mana"
 	case 14:
 		message = "[No_Such_Ritual] The specified ritual is not recognized"
+	case 15:
+		message = "[No_Golem_Found] Golem with the specified symbol could not be found in user data"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

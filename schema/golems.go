@@ -4,7 +4,7 @@ package schema
 // Defines a user which has Name, Symbol, Description
 type Golem struct {
 	HasSymbol
-	Purpose string `json:"purpose" binding:"required"`
+	Archetype string `json:"archetype" binding:"required"`
 	LocationSymbol string `json:"location-symbol" binding:"required"` 
 	Status string `json:"status" binding:"required"`
 }
@@ -17,25 +17,25 @@ type Golem struct {
 // 	LastEnergyTick int64 `json:"last-energy-tick" binding:"required"`
 // }
 
-func NewGolem(symbol string, purpose string) Golem {
+func NewGolem(symbol string, archetype string) Golem {
 	return Golem{
 		HasSymbol: HasSymbol{
 			Symbol: symbol,
 		},
-		Purpose: purpose,
+		Archetype: archetype,
 		LocationSymbol: "A-G",
 		Status: "idle",
 	}
 }
 
-func DoesGolemPurposeMatch(golem Golem, purpose string) bool {
-	return golem.Purpose == purpose
+func DoesGolemArchetypeMatch(golem Golem, archetype string) bool {
+	return golem.Archetype == archetype
 }
 
-func FilterGolemListByPurpose(golems []Golem, purpose string) []Golem {
+func FilterGolemListByArchetype(golems []Golem, archetype string) []Golem {
 	filteredList := make([]Golem, 0)
 	for _, golem := range golems {
-		if DoesGolemPurposeMatch(golem, purpose) {
+		if DoesGolemArchetypeMatch(golem, archetype) {
 			filteredList = append(filteredList, golem)
 		}
 	}

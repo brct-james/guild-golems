@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/gamelogic"
@@ -121,6 +122,17 @@ func AccountInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End accountInfo --"))
 }
 
+// Handler function for the secure route: GET /api/v0/my/golems
+func GetGolems(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- GetGolems --"))
+	OK, userData, _, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	responses.SendRes(w, responses.Generic_Success, userData.Golems, "")
+	log.Debug.Println(log.Cyan("-- End GetGolems --"))
+}
+
 // Handler function for the secure route: GET /api/v0/my/invokers
 func GetInvokers(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- GetInvokers --"))
@@ -128,7 +140,7 @@ func GetInvokers(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	invokers := schema.FilterGolemListByPurpose(userData.Golems, "invoker")
+	invokers := schema.FilterGolemListByArchetype(userData.Golems, "invoker")
 	getInvokerJsonString, getInvokerJsonStringErr := responses.JSON(invokers)
 	if getInvokerJsonStringErr != nil {
 		log.Error.Printf("Error in GetInvokers, could not format invokers as JSON. invokers: %v, error: %v", userData, getInvokerJsonStringErr)
@@ -138,41 +150,49 @@ func GetInvokers(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End GetInvokers --"))
 }
 
-// Handler function for the secure route: GET /api/v0/my/invokers/{symbol}
-func InvokerInfo(w http.ResponseWriter, r *http.Request) {
+// Handler function for the secure route: GET /api/v0/my/golems/info/{symbol}
+func GolemInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- InvokerInfo --"))
+	route_vars := mux.Vars(r)
+	symbol := route_vars["symbol"]
 	OK, userData, _, _ := secureGetUser(w, r)
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	//* Placeholder/
-	getUserJsonString, getUserJsonStringErr := responses.JSON(userData)
-	if getUserJsonStringErr != nil {
-		log.Error.Printf("Error in InvokerInfo, could not format thisUser as JSON. userData: %v, error: %v", userData, getUserJsonStringErr)
+	// Find golem with symbol
+	for i := range userData.Golems {
+		if strings.EqualFold(userData.Golems[i].Symbol, symbol) {
+			// Found
+			responses.SendRes(w, responses.Generic_Success, userData.Golems[i], "")
+			return
+		}
 	}
-	log.Debug.Printf("Sending response for InvokerInfo:\n%v", getUserJsonString)
-	responses.SendRes(w, responses.Generic_Success, userData, "")
-	//*/
+	// Not found
+	responses.SendRes(w, responses.No_Golem_Found, nil, "")
 	log.Debug.Println(log.Cyan("-- End InvokerInfo --"))
 }
 
 // Handler function for the secure route: PUT /api/v0/my/invokers/{symbol}
-func ChangeInvokerTask(w http.ResponseWriter, r *http.Request) {
-	log.Debug.Println(log.Yellow("-- ChangeInvokerTask --"))
-	OK, userData, _, _ := secureGetUser(w, r)
-	if !OK {
-		return // Failure states handled by secureGetUser, simply return
-	}
-	//* Placeholder/
-	getUserJsonString, getUserJsonStringErr := responses.JSON(userData)
-	if getUserJsonStringErr != nil {
-		log.Error.Printf("Error in ChangeInvokerTask, could not format thisUser as JSON. userData: %v, error: %v", userData, getUserJsonStringErr)
-	}
-	log.Debug.Printf("Sending response for ChangeInvokerTask:\n%v", getUserJsonString)
-	responses.SendRes(w, responses.Generic_Success, userData, "")
-	//*/
-	log.Debug.Println(log.Cyan("-- End ChangeInvokerTask --"))
-}
+// func ChangeInvokerTask(w http.ResponseWriter, r *http.Request) {
+// 	log.Debug.Println(log.Yellow("-- ChangeInvokerTask --"))
+// 	route_vars := mux.Vars(r)
+// 	symbol := route_vars["symbol"]
+// 	OK, userData, _, _ := secureGetUser(w, r)
+// 	if !OK {
+// 		return // Failure states handled by secureGetUser, simply return
+// 	}
+// 	// Find golem with symbol
+// 	for i := range userData.Golems {
+// 		if strings.EqualFold(userData.Golems[i].Symbol, symbol) {
+// 			// Found
+// 			responses.SendRes(w, responses.Generic_Success, userData.Golems[i], "")
+// 			return
+// 		}
+// 	}
+// 	// Not found
+// 	responses.SendRes(w, responses.No_Golem_Found, nil, "")
+// 	log.Debug.Println(log.Cyan("-- End ChangeInvokerTask --"))
+// }
 
 // Handler function for the secure route: GET /api/v0/my/rituals
 func ListRituals(w http.ResponseWriter, r *http.Request) {
@@ -216,7 +236,7 @@ func NewInvoker(w http.ResponseWriter, r *http.Request) {
 		return // Failure states handled by TryManaPurchase, simply return
 	}
 	userData.Mana = newManaValue
-	invokers := schema.FilterGolemListByPurpose(userData.Golems, "invoker")
+	invokers := schema.FilterGolemListByArchetype(userData.Golems, "invoker")
 	newGolem := schema.NewGolem(fmt.Sprintf("INV-%v", len(invokers)), "invoker")
 	userData.Golems = append(userData.Golems, newGolem)
 	saveUserErr := SaveUserToDB(udb, userData.Token, userData)

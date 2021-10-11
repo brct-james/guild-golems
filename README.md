@@ -21,7 +21,9 @@ Go-based server for a fantasy-themed guild management game
 - `POST: /api/v0/users/{username}/claim` attempts to claim the specified username, returns the user data after creation, including token which users must save to access private routes
 - `GET: /api/v0/users/{username}` returns the public user data
 - `GET: /api/v0/my/account` returns the private user data (includes token)
-- `GET: /api/v0/my/invokers` list all invoker golems owned
+- `GET: /api/v0/my/golems` list all golems owned
+- `GET: /api/v0/my/golems/invokers` list all invoker golems owned
+- `GET: /api/v0/my/golem/{symbol}` get info on the specified golem
 - `GET: /api/v0/my/rituals` list all known rituals
 - `GET: /api/v0/my/rituals/{ritual}` show information on a particular ritual
 - `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
@@ -35,15 +37,11 @@ See `responses.go`
 
 ### In-Progress
 
-- Golems v0
-- `.../my/invokers/{symbol}` to manage individual invokers
-- - `GET` lists invoker info
-- - `PUT` to change invoker status (to traveling, generating mana, etc.)
-- - `DELETE` to delete the invoker
-- - v0: single golem type per task, takes mana to summon, summoner golems generate mana
+- Nothing
 
 ### Planned: v0.1 MVP
 
+- DECISION: Should golems and their archetypes have unique routes (e.g. golems/..., invokers/..., merchants/..., etc.)?
 - Rituals v0
 - - cast spells
 - - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
@@ -112,6 +110,13 @@ See `responses.go`
 - `.../my/inventory` inventory report showing what resources are at each location
 - `.../my/golems` golem report showing what golems are at each location and what task they are doing if active
 - `rituals` should be loaded from json into memory, User.KnownRituals should instead store the symbols and the ListRituals handler should lookup the rituals from the json map
+- Golems v0
+- `.../my/invokers/{symbol}` to manage individual invokers
+- - `PUT` to change invoker status (to traveling, generating mana, etc.)
+- - - use request body for the new info: https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
+- - `DELETE` to delete the invoker
+- - - TBD if this is actually something that is useful, almost certainly should be placed under my/golems instead
+- - v0: single golem type per task, takes mana to summon, summoner golems generate mana
 
 ### Planned: Unscheduled
 
@@ -136,6 +141,8 @@ See `responses.go`
 - investigate using a job queue/dispatcher with one worker per user token handling any requests sent to that user's channel for distributed computing
 - - global stuff would be handled by its own channel and worker
 - - thus only one worker is ever going to be accessing any given portion of the DB at once
+- rather than just calling CalculateManaRegen in secureGetUser, use a GetMana function that is only called when absolutely necessary - right now these are identical solutions but in the future other things will use secureGetUser that have nothing to do with mana
+- - Also would need a flushUserUpdates or something like that for things like `/my/account` which need everything up to date
 
 ## Build & Run
 
@@ -159,11 +166,14 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 
 - Golems v0
 - - Golems are created via rituals
-- `GET.../my/invokers` list invokers
+- - `GET ../my/golems` list golems
+- - - `GET.../my/golems/invokers` list invokers
+- - `../my/golem/{symbol}` get info on and manage individual golems
+- - - `GET` gives info on the specified invoker
 - Rituals v0
 - - `GET .../my/rituals` list rituals
-- - `POST .../my/rituals/summon-invoker` create new invoker
-- - `GET .../my/rituals/summon-invoker` information on the given ritual
+- - - `POST .../my/rituals/summon-invoker` create new invoker
+- - - `GET .../my/rituals/summon-invoker` information on the given ritual
 - Implemented the basics of the mana system and regeneration
 
 ### v0.0.1
