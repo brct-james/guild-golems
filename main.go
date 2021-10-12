@@ -15,13 +15,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Configuration
+// Server Configuration
 
 var reloadWorldFromJSON bool = true
 var refreshAuthSecret bool = false
 var flushUDB bool = true
 
 var worldJSONPath string = "./v0_world.json"
+
+// Game Configuration
+// in user-metrics.go: activityThresholdInMinutes controls what users are considered 'active'
 
 // Define relationship between string database name and redis db num
 var dbMap = map[string]int{

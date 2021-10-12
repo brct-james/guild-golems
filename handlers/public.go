@@ -9,6 +9,7 @@ import (
 
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/log"
+	"github.com/brct-james/guild-golems/metrics"
 	"github.com/brct-james/guild-golems/rdb"
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
@@ -124,10 +125,23 @@ func GetLeaderboards(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End GetLeaderboards --"))
 }
 
+// - `.../users` users summary (e.g. unique, active - call in last 5 min, etc.) example:
+// ```json
+// {
+//   "uniqueUsers": ["Greenitthe", ...],
+//   "activeUsers": ["Greenitthe", ...],
+//   "usersWithAchievement": {
+//     "ratelimited": ["Greenitthe", ...],
+//     "first_million": ["Greenitthe", ...],
+//     ...
+//   }
+// }
+// ```
 // Handler function for the route: /api/v0/users
 func UsersSummary(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- usersSummary --"))
-	responses.SendRes(w, responses.Unimplemented, nil, "usersSummary")
+	res := metrics.AssembleUsersMetrics()
+	responses.SendRes(w, responses.Generic_Success, res, "")
 	log.Debug.Println(log.Cyan("-- End usersSummary --"))
 }
 
@@ -222,6 +236,8 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Created successfully
+	// Track in user metrics
+	metrics.TrackNewUser(username)
 	log.Debug.Printf("Generated token %s and claimed username %s", token, username)
 	responses.SendRes(w, responses.Generic_Success, newUser, "")
 	log.Debug.Println(log.Cyan("-- End usernameClaim --"))

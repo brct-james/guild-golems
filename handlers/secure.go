@@ -13,9 +13,11 @@ import (
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/gamelogic"
 	"github.com/brct-james/guild-golems/log"
+	"github.com/brct-james/guild-golems/metrics"
 	"github.com/brct-james/guild-golems/rdb"
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
+	"github.com/brct-james/guild-golems/timecalc"
 	"github.com/gorilla/mux"
 )
 
@@ -40,13 +42,6 @@ const (
 	// }
 // Similarly wrote the below for getting validation context from auth middleware
 
-// Add seconds to time
-func addSecondsToTime(startTime time.Time, seconds int) (time.Time) {
-	duration := time.Second * time.Duration(seconds)
-	log.Debug.Printf("StartTime: %v, EndTime: %v", startTime, startTime.Add(duration))
-	return startTime.Add(duration)
-}
-
 // Attempt to get validation context
 func GetValidationFromCtx(r *http.Request) (auth.ValidationPair, error) {
 	log.Debug.Println("Recover validationpair from context")
@@ -54,6 +49,8 @@ func GetValidationFromCtx(r *http.Request) (auth.ValidationPair, error) {
 	if !ok {
 		return auth.ValidationPair{}, errors.New("could not get ValidationPair")
 	}
+	// Any time a user hits a secure endpoint, track a call from their account
+	metrics.TrackUserCall(userInfo.Username)
 	return userInfo, nil
 }
 
@@ -508,7 +505,7 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 		log.Debug.Printf("routeInfo: %v", routeInfo)
 		destinationSymbol := strings.Split(routeInfo.Symbol, "|")[1]
 		// Start travel
-		targetGolem.ArrivalTime = addSecondsToTime(time.Now(), routeInfo.TravelTime).Unix()
+		targetGolem.ArrivalTime = timecalc.AddSecondsToTimestamp(time.Now(), routeInfo.TravelTime).Unix()
 		targetGolem.Status = "traveling"
 		targetGolem.LocationSymbol = destinationSymbol
 		// Save to DB

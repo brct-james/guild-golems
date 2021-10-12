@@ -18,19 +18,30 @@ Go-based server for a fantasy-themed guild management game
 - Have golems travel between locations
 - Leaderboards based on various criteria
 - - Note: At present leaderboards are not being generated nor cached, so no rankings are returned
+- Get lists of all unique, active, etc. users
 
 ### Endpoints
 
 - `GET: /api/v0/leaderboards` list all available leaderboards and their descriptions
 - `GET: /api/v0/leaderboards/{board}` get the specified leaderboard rankings
 - `GET: /api/v0/locations` returns entire world json from DB
-- `POST: /api/v0/users/{username}/claim` attempts to claim the specified username, returns the user data after creation, including token which users must save to access private routes
+- `GET: /api/v0/users` returns lists of registered usernames with various filters: unique, active, etc.
 - `GET: /api/v0/users/{username}` returns the public user data
+- `POST: /api/v0/users/{username}/claim` attempts to claim the specified username, returns the user data after creation, including token which users must save to access private routes
 - `GET: /api/v0/my/account` returns the private user data (includes token)
 - `GET: /api/v0/my/golems` list all golems owned
 - `GET: /api/v0/my/golems/{archetype}` list all golems owned filtered by archetype
 - `GET: /api/v0/my/golem/{symbol}` get info on the specified golem
-- `PUT: /api/v0/my/golem/{symbol}` change golem task/status based on request body (see below)
+- `PUT: /api/v0/my/golem/{symbol}` change golem task/status based on request body (see requests section below)
+- `GET: /api/v0/my/rituals` list all known rituals
+- `GET: /api/v0/my/rituals/{ritual}` show information on a particular ritual
+- `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
+- - `summon-invoker` Spend mana to summon a new invoker, who can be used to help generate even more mana.
+- - `summon-harvester` Spend mana to summon a new harvester, who can be used to gather resources from nodes in the world.
+
+### Requests
+
+- `PUT: /api/v0/my/golem/{symbol}` expects the following body:
 
 ```json
 {
@@ -43,11 +54,6 @@ Go-based server for a fantasy-themed guild management game
 - - Where instructions contain key:value pairs specific to each type of activity
 - - - `idle` instructions | {}
 - - - `traveling` instructions | {"route": "A-G|A-SWF|WALK"}
-- `GET: /api/v0/my/rituals` list all known rituals
-- `GET: /api/v0/my/rituals/{ritual}` show information on a particular ritual
-- `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
-- - `summon-invoker` Spend mana to summon a new invoker, who can be used to help generate even more mana.
-- - `summon-harvester` Spend mana to summon a new harvester, who can be used to gather resources from nodes in the world.
 
 ### Response Codes
 
@@ -57,24 +63,9 @@ See `responses.go`
 
 ### In-Progress
 
-- Convert all json and vars to kebab-case
 - Refactor ChangeGolemTask into smaller functions
 - Harvesters collecting free resources from nodes
 - - v0: simply collecting X resource at location taking Y time
-- Calculate and cache leaderboards
-- `.../users` users summary (e.g. unique, active - call in last 5 min, etc.) example:
-
-```json
-{
-  "uniqueUsers": ["Greenitthe", ...],
-  "activeUsers": ["Greenitthe", ...],
-  "usersWithAchievement": {
-    "ratelimited": ["Greenitthe", ...],
-    "first_million": ["Greenitthe", ...],
-    ...
-  }
-}
-```
 
 ### Planned: v0.1 MVP
 
@@ -117,6 +108,9 @@ See `responses.go`
 - - `DELETE` to delete the invoker
 - - - TBD if this is actually something that is useful, almost certainly should be placed under my/golems instead
 - - v0: single golem type per task, takes mana to summon, summoner golems generate mana
+- Calculate and cache leaderboards in metric-db
+- Tracking all users ever registered, persistent through wipes in metric-db
+- Convert all public json and routes to kebab-case, all private vars and funcs to snake case
 
 ### Planned: Unscheduled
 
@@ -190,6 +184,10 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - Added leaderboards endpoints (not being generated and cached yet)
 - - `GET .../leaderboards` list leaderboards
 - - `GET .../leaderboards/{board}` get leaderboard rankings
+- Added users endpoint and lists of unique, active, etc. users
+- - `GET .../users`
+- - Implemented `metrics` package to handle these and other metrics
+- Split timecalc functions into their own package
 
 ### v0.0.1
 
