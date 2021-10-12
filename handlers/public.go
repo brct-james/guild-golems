@@ -97,6 +97,33 @@ func V0Status(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End v0Status --"))
 }
 
+// Handler function for the route: /api/v0/leaderboards
+func LeaderboardDescriptions(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- LeaderboardDescriptions --"))
+	boards := make([]schema.Leaderboard, 0)
+	for _, b := range schema.Leaderboards {
+		boards = append(boards, b)
+	}
+	response := schema.GetLeaderboardDescriptionResponses(boards)
+	responses.SendRes(w, responses.Generic_Success, response, "")
+	log.Debug.Println(log.Cyan("-- End LeaderboardDescriptions --"))
+}
+
+// Handler function for the route: /api/v0/leaderboards/{board}
+func GetLeaderboards(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- GetLeaderboards --"))
+	route_vars := mux.Vars(r)
+	boardKey := route_vars["board"]
+	board, ok := schema.Leaderboards[boardKey]
+	if !ok {
+		// Fail state, board not found
+		responses.SendRes(w, responses.Leaderboard_Not_Found, nil, "")
+		return
+	}
+	responses.SendRes(w, responses.Generic_Success, board, "")
+	log.Debug.Println(log.Cyan("-- End GetLeaderboards --"))
+}
+
 // Handler function for the route: /api/v0/users
 func UsersSummary(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- usersSummary --"))

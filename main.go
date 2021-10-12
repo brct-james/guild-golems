@@ -113,6 +113,8 @@ func handleRequests() {
 	mxr.HandleFunc("/", handlers.Homepage).Methods("GET")
 	mxr.HandleFunc("/api", handlers.ApiSelection).Methods("GET")
 	mxr.HandleFunc("/api/v0", handlers.V0Status).Methods("GET")
+	mxr.HandleFunc("/api/v0/leaderboards", handlers.LeaderboardDescriptions).Methods("GET")
+	mxr.HandleFunc("/api/v0/leaderboards/{board}", handlers.GetLeaderboards).Methods("GET")
 	mxr.HandleFunc("/api/v0/users", handlers.UsersSummary).Methods("GET")
 	mxr.HandleFunc("/api/v0/users/{username}", handlers.UsernameInfo).Methods("GET")
 	mxr.HandleFunc("/api/v0/users/{username}/claim", handlers.UsernameClaim).Methods("POST")

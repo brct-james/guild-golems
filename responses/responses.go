@@ -47,6 +47,7 @@ const (
 	No_Available_Routes ResponseCode = 21
 	Target_Route_Unavailable ResponseCode = 22
 	UDB_Update_Failed ResponseCode = 23
+	Leaderboard_Not_Found ResponseCode = 24
 )
 
 // Defines Response structure for output
@@ -115,6 +116,8 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[Target_Route_Unavailable] The specified route is not available at the current location"
 	case 23:
 		message = "[UDB_Update_Failed] Could not complete request due to error while saving user data to udb"
+	case 24:
+		message = "[Leaderboard_Not_Found] Requested leaderboard not found"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

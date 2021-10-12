@@ -16,9 +16,13 @@ Go-based server for a fantasy-themed guild management game
 - - Mana regen is calculated every time `secureGetUser` is called
 - - `harvesters` gather resources from nodes in the world
 - Have golems travel between locations
+- Leaderboards based on various criteria
+- - Note: At present leaderboards are not being generated nor cached, so no rankings are returned
 
 ### Endpoints
 
+- `GET: /api/v0/leaderboards` list all available leaderboards and their descriptions
+- `GET: /api/v0/leaderboards/{board}` get the specified leaderboard rankings
 - `GET: /api/v0/locations` returns entire world json from DB
 - `POST: /api/v0/users/{username}/claim` attempts to claim the specified username, returns the user data after creation, including token which users must save to access private routes
 - `GET: /api/v0/users/{username}` returns the public user data
@@ -53,15 +57,27 @@ See `responses.go`
 
 ### In-Progress
 
-- Convert all json and vars to snake_case
+- Convert all json and vars to kebab-case
 - Refactor ChangeGolemTask into smaller functions
-- Golem traveling
 - Harvesters collecting free resources from nodes
 - - v0: simply collecting X resource at location taking Y time
+- Calculate and cache leaderboards
+- `.../users` users summary (e.g. unique, active - call in last 5 min, etc.) example:
+
+```json
+{
+  "uniqueUsers": ["Greenitthe", ...],
+  "activeUsers": ["Greenitthe", ...],
+  "usersWithAchievement": {
+    "ratelimited": ["Greenitthe", ...],
+    "first_million": ["Greenitthe", ...],
+    ...
+  }
+}
+```
 
 ### Planned: v0.1 MVP
 
-- DECISION: Should golems and their archetypes have unique routes (e.g. golems/..., invokers/..., merchants/..., etc.)?
 - Rituals v0
 - - cast spells
 - - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
@@ -79,40 +95,6 @@ See `responses.go`
 - `/docs` documentation route
 - `/api` information on each api version like basic live/down status (future - once multiple versions are live)
 - `/api/v0` v0 api status as well as intresting metrics in the data field (totalCoins in circulation, totalCalls made to server, lastWipeTimestamp, avgServerTicksPerSecond in a rolling minute, etc.)
-- `.../users` users summary (e.g. unique, active - call in last 5 min, etc.) example:
-
-```json
-{
-  "uniqueUsers": ["Greenitthe", ...],
-  "activeUsers": ["Greenitthe", ...],
-  "usersWithAchievement": {
-    "ratelimited": ["Greenitthe", ...],
-    "first_million": ["Greenitthe", ...],
-    ...
-  }
-}
-```
-
-- `.../leaderboard` info on top 10 players by various metrics, example:
-
-```json
-{
-  "coinleaders": [
-    {
-      "name": "Greenitthe",
-      "totalGolems": 47,
-      "coins": 123456,
-      "callsLastHour": 212,
-      "achievementCount": 7,
-      "creationTimestamp": 0000000000
-    },
-    ...
-  ],
-  "golemleaders": [{...}, ...],
-  "achievementLeaders": [{...}, ...]
-}
-```
-
 - `.../achievements` info on each achievement like name, description/criteria, list of players with it, etc.
 - for v0 give each task its own endpoint, may re-evaluate this structure later
 - - `.../my/couriers` transporting materials between two locations
@@ -189,7 +171,7 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 
 - Golems v0
 - - Golems are created via rituals
-- - `GET ../my/golems` list golems
+- - `GET .../my/golems` list golems
 - - - `GET.../my/golems/{archetype}` list golems filtered by archetype
 - - `../my/golem/{symbol}` get info on and manage individual golems
 - - - `GET` gives info on the specified invoker
@@ -205,6 +187,9 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - Changing golem status
 - - Add travel time calculation
 - Mana calculation only counts invokers with the 'invoking' status
+- Added leaderboards endpoints (not being generated and cached yet)
+- - `GET .../leaderboards` list leaderboards
+- - `GET .../leaderboards/{board}` get leaderboard rankings
 
 ### v0.0.1
 
