@@ -14,6 +14,7 @@ type Golem struct {
 	LocationSymbol string `json:"location_symbol" binding:"required"` 
 	Status string `json:"status" binding:"required"`
 	ArrivalTime int64 `json:"arrival_time" binding:"required"`
+	Capacity float64 `json:"capacity" binding:"required"`
 }
 
 // golem statuses map
@@ -68,7 +69,7 @@ type GolemStatusUpdateBody struct {
 // 	LastEnergyTick int64 `json:"last-energy-tick" binding:"required"`
 // }
 
-func NewGolem(symbol string, archetype string, startingStatus string) Golem {
+func NewGolem(symbol string, archetype string, startingStatus string, capacity float64) Golem {
 	return Golem{
 		HasSymbol: HasSymbol{
 			Symbol: symbol,
@@ -77,6 +78,7 @@ func NewGolem(symbol string, archetype string, startingStatus string) Golem {
 		LocationSymbol: "A-G",
 		Status: startingStatus,
 		ArrivalTime: 0,
+		Capacity: capacity,
 	}
 }
 

@@ -1,0 +1,28 @@
+{
+  "resources": {
+    "WATER": {
+      "symbol": "WATER",
+      "name": "Water",
+      "description": "Essential, both for life and alchemy",
+      "capacity_per_unit": 1
+    },
+    "LOGS": {
+      "symbol": "LOGS",
+      "name": "Logs",
+      "description": "Useful for building, especially when hewn into lumber",
+      "capacity_per_unit": 10
+    },
+    "HERBS": {
+      "symbol": "HERBS",
+      "name": "Herbs",
+      "description": "'Medicinal' herbs, good for what ails ya",
+      "capacity_per_unit": 0.25
+    },
+    "PEPPERMINT": {
+      "symbol": "PEPPERMINT",
+      "name": "Peppermint",
+      "description": "Why is it spicy",
+      "capacity_per_unit": 0.25
+    }
+  }
+}

@@ -3,5 +3,5 @@ package schema
 
 type World struct {
 	Thing
-	Regions []Region `json:"regions" binding:"required"`
+	RegionSymbols []string `json:"region_symbols" binding:"required"`
 }

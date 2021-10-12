@@ -4,20 +4,11 @@ package schema
 // Defines generic resource type
 type Resource struct {
 	Thing
+	CapacityPerUnit float64 `json:"capacity_per_unit" binding:"required"`
+}
+
+// Defines resource in an inventory, used in udb, not json/wdb
+type InventoryResource struct {
+	Resource
 	Quantity int `json:"quantity" binding:"required"`
-}
-
-// Defines harvestable resource node
-type ResourceNode struct {
-	Resource
-	MaxQuantity int `json:"max_quantity" binding:"required"`
-	RenewalRate int `json:"renewal_rate" binding:"required"`
-	HarvestTime int `json:"harvest_time" binding:"required"`
-	DropTable []HarvestableResource `json:"drop_table" binding:"required"`
-}
-
-// Defines harvestable resource
-type HarvestableResource struct {
-	Resource
-	Rarity float64 `json:"rarity" binding:"required"`
 }

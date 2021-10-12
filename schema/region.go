@@ -4,5 +4,5 @@ package schema
 type Region struct {
 	Thing
 	BorderRegionSymbols []string `json:"border_region_symbols" binding:"required"`
-	Locales []Locale `json:"locales" binding:"required"`
+	LocaleSymbols []string `json:"locale_symbols" binding:"required"`
 }
