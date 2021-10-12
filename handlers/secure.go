@@ -3,10 +3,12 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/gamelogic"
@@ -37,6 +39,13 @@ const (
 	// 	return
 	// }
 // Similarly wrote the below for getting validation context from auth middleware
+
+// Add seconds to time
+func addSecondsToTime(startTime time.Time, seconds int) (time.Time) {
+	duration := time.Second * time.Duration(seconds)
+	log.Debug.Printf("StartTime: %v, EndTime: %v", startTime, startTime.Add(duration))
+	return startTime.Add(duration)
+}
 
 // Attempt to get validation context
 func GetValidationFromCtx(r *http.Request) (auth.ValidationPair, error) {
@@ -100,7 +109,7 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 		return false, schema.User{}, rdb.Database{}, auth.ValidationPair{}
 	}
 	// Success case
-	thisUser = gamelogic.CalculateManaRegen(thisUser)
+	thisUser = gamelogic.CalculateUserUpdates(thisUser)
 	return true, thisUser, udb, userInfo
 }
 
@@ -145,7 +154,7 @@ func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database
 	newGolemSymbol := fmt.Sprintf("%s-%d", schema.GolemArchetypes[archetype].Abbreviation, newGolemId)
 	newGolem := schema.NewGolem(newGolemSymbol, archetype, startingStatus)
 	userData.Golems = append(userData.Golems, newGolem)
-	saveUserErr := SaveUserToDB(udb, userData.Token, userData)
+	saveUserErr := SaveUserToDB(udb, userData)
 	if saveUserErr != nil {
 		// fail state - could not save
 		saveUserErrMsg := fmt.Sprintf("in createNewGolemInDB | Username: %v | SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
@@ -166,6 +175,48 @@ func trimTrailingS(input string) (string) {
 		return input[:size-1]
 	}
 	return input
+}
+
+// Get body for statusUpdate requests
+func getRequestBodyForGolemStatusUpdate(w http.ResponseWriter, r *http.Request) (bool, schema.GolemStatusUpdateBody) {
+	var body schema.GolemStatusUpdateBody
+	decoder := json.NewDecoder(r.Body)
+	if decodeErr := decoder.Decode(&body); decodeErr != nil {
+		// Fail case, could not decode
+		responses.SendRes(w, responses.Bad_Request, nil, "Could not decode request body, is it present?")
+		log.Debug.Printf("Error in getRequestBodyForGolemStatusUpdate: %v", decodeErr)
+		return false, schema.GolemStatusUpdateBody{}
+	}
+	// Success case, decoded request
+	return true, body
+}
+
+func stringKeyInMap(key string, dict map[string]interface{}) (bool, interface{}) {
+	if val, ok := dict[key]; ok {
+		// yes, key in map
+		return true, val
+	}
+	// no, key not in map
+	return false, nil
+}
+
+func GetUDBAndSaveUserToDB(w http.ResponseWriter, r *http.Request, userData schema.User) (bool) {
+	udb, udbErr := GetUdbFromCtx(r)
+	if udbErr != nil {
+		// Fail state getting context
+		log.Error.Printf("Could not get UserDBContext in GetUDBAndSaveUserToDB")
+		responses.SendRes(w, responses.UDB_Update_Failed, nil, "")
+		return false
+	}
+	saveUserErr := SaveUserToDB(udb, userData)
+	if saveUserErr != nil {
+		// fail state - could not save
+		saveUserErrMsg := fmt.Sprintf("in GetUDBAndSaveUserToDB | Username: %v | SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
+		log.Debug.Println(saveUserErrMsg)
+		responses.SendRes(w, responses.DB_Save_Failure, nil, saveUserErrMsg)
+		return false
+	}
+	return true
 }
 
 // HANDLER FUNCTIONS
@@ -322,8 +373,9 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 		responses.SendRes(w, responses.No_Golem_Found, nil, "")
 		return
 	}
-	currentStatus := userData.Golems[golemIndex].Status
-	archetype := userData.Golems[golemIndex].Archetype
+	targetGolem := &userData.Golems[golemIndex]
+	currentStatus := targetGolem.Status
+	archetype := targetGolem.Archetype
 	// Found golem, check that not in blocking status
 	statusInfo, ok := schema.GolemStatuses[currentStatus]
 	if !ok {
@@ -335,16 +387,19 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 	// Sucess case - golem statusInfo gotten successfully
 	if statusInfo.IsBlocking {
 		// Cannot change status, is in blocking status
-		responses.SendRes(w, responses.Golem_In_Blocking_Status, nil, "")
+		responses.SendRes(w, responses.Golem_In_Blocking_Status, nil, currentStatus)
 		return
 	}
 	
 	// Get info on status change from request body
-	//TODO: this
-	var newStatus string = "idle" //TODO: should get from body
+	gotReqBody, reqBody := getRequestBodyForGolemStatusUpdate(w, r)
+	if !gotReqBody {
+		// Fail state, handled by function, simply return
+		return
+	}
 
 	// Check that new status in list of AllowedStatuses for archetype
-	isAllowed, archetypeErr := schema.IsStatusAllowedForArchetype(archetype, newStatus)
+	isAllowed, archetypeErr := schema.IsStatusAllowedForArchetype(archetype, reqBody.NewStatus)
 	if archetypeErr != nil {
 		// Fail state, error while checking for allowed
 		responses.SendRes(w, responses.Generic_Failure, nil, "Internal server error occurred while checking if new status was allowed for specified golem's archetype")
@@ -358,19 +413,118 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 	}
 	// Success state, new status is allowed, complete changes based on request body
 	//TODO: this
-	switch newStatus {
+	switch reqBody.NewStatus {
 	case "idle":
-		//TODO: this
+		targetGolem.Status = "idle"
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
+		if !savedToDb {
+			return // Fail state, handled by func, return
+		}
+		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	case "harvesting":
+		// reqBody.Instructions
 		//TODO: this
+		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	case "traveling":
-		//TODO: this
+		// Check for all expected instructions
+		// Convert Instructions to map with string keys
+		statusInstructions := reqBody.Instructions.(map[string]interface{})
+		routeInInstructions, targetRoute := stringKeyInMap("route", statusInstructions)
+		if !routeInInstructions {
+			// Fail case
+			log.Debug.Printf("'route' key required for 'traveling' status")
+			responses.SendRes(w, responses.Bad_Request, nil, "'route' key required for 'traveling' status")
+			return
+		}
+		// Get routes for golem locale
+		wdbSuccess, wdb := GetWdbFromCtx(w, r)
+		if !wdbSuccess {
+			log.Debug.Printf("Could not get wdb from ctx")
+			return // Fail state, could not get wdb, handled by func - simply return
+		}
+		// Success state, got wdb
+		// Get locale data
+		bytes, err := wdb.GetJsonData("world", ".regions")
+		if err != nil {
+			log.Error.Printf("Could not get world from DB! Err: %v", err)
+			responses.SendRes(w, responses.WDB_Get_Failure, nil, "in ChangeGolemTask")
+			return
+		}
+		regions := []schema.Region{}
+		err = json.Unmarshal(bytes, &regions)
+		if err != nil {
+			log.Error.Printf("Could not unmarshal world json from DB: %v", err)
+			responses.SendRes(w, responses.JSON_Unmarshal_Error, nil, "in ChangeGolemTask")
+			return
+		}
+		// Get current location slice 0: Region, 1: Locale, 
+		locationSlice := strings.Split(targetGolem.LocationSymbol, "-")
+		// Find routes for relevant locale
+		var curLocale schema.Locale
+		foundLocale := false
+		for _, region := range regions {
+			if strings.EqualFold(region.Symbol, locationSlice[0]) {
+				for _, locale := range region.Locales {
+					if strings.EqualFold(locale.Symbol, targetGolem.LocationSymbol) {
+						// Success Case
+						curLocale = locale
+						foundLocale = true
+						break
+					}
+				}
+			}
+		}
+		if !foundLocale {
+			// Fail case could not find locale
+			responses.SendRes(w, responses.No_Available_Routes, nil, "")
+			log.Error.Printf("Golem LocaleSymbol that could not be found in DB! Username: %s | Golem LocationSymbol: %s", userData.Username, targetGolem.LocationSymbol)
+		}
+		if len(curLocale.Routes) < 1 {
+			// Fail case, no routes found
+			responses.SendRes(w, responses.No_Available_Routes, nil, "")
+			log.Error.Printf("Golem has no available routes! Username: %s | Golem LocationSymbol: %s | Locale: %v", userData.Username, targetGolem.LocationSymbol, curLocale)
+			return
+		}
+
+		// Now check for targetRoute in curLocale.Routes
+		var routeInfo schema.Route
+		routeFound := false
+		for _, route := range curLocale.Routes {
+			if strings.EqualFold(route.Symbol, targetRoute.(string)) {
+				// Success case, found targetRoute in curLocale.Routes
+				log.Debug.Printf("Found targetRoute in curLocal.Routes. route.Symbol: %s, targetRoute.(string): %s, route: %v", route.Symbol, targetRoute.(string), route)
+				routeFound = true
+				routeInfo = route
+				break
+			}
+		}
+		if !routeFound {
+			// Fail case, targetRoute not in curLocale.Routes
+			log.Debug.Printf("targetRoute not in curLocale.Routes")
+			responses.SendRes(w, responses.Target_Route_Unavailable, nil, "")
+			return
+		}
+		// Get destination from routeInfo
+		log.Debug.Printf("routeInfo: %v", routeInfo)
+		destinationSymbol := strings.Split(routeInfo.Symbol, "|")[1]
+		// Start travel
+		targetGolem.ArrivalTime = addSecondsToTime(time.Now(), routeInfo.TravelTime).Unix()
+		targetGolem.Status = "traveling"
+		targetGolem.LocationSymbol = destinationSymbol
+		// Save to DB
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
+		if !savedToDb {
+			return // Fail state, handled by func, return
+		}
+		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	case "invoking":
 		//TODO: this
+		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	default:
 		// Error state, newStatus passed validation but not caught by switch statement
 		//TODO: this
+		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	}
-	responses.SendRes(w, responses.Generic_Success, userData.Golems[golemIndex], "")
+	
 	log.Debug.Println(log.Cyan("-- End ChangeGolemTask --"))
 }

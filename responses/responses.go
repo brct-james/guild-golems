@@ -43,6 +43,10 @@ const (
 	No_Such_Status ResponseCode = 17
 	Golem_In_Blocking_Status ResponseCode = 18
 	New_Status_Not_Allowed ResponseCode = 19
+	Bad_Request ResponseCode = 20
+	No_Available_Routes ResponseCode = 21
+	Target_Route_Unavailable ResponseCode = 22
+	UDB_Update_Failed ResponseCode = 23
 )
 
 // Defines Response structure for output
@@ -103,6 +107,14 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[Golem_In_Blocking_Status] Golem's current status does not allow changes to be made"
 	case 19:
 		message = "[New_Status_Not_Allowed] Specified status is not valid for the specified golem's archetype"
+	case 20:
+		message = "[Bad_Request] Invalid request payload, please validate the request body conforms to expectations"
+	case 21:
+		message = "[No_Available_Routes] No routes available for the specified golem, contact developer"
+	case 22:
+		message = "[Target_Route_Unavailable] The specified route is not available at the current location"
+	case 23:
+		message = "[UDB_Update_Failed] Could not complete request due to error while saving user data to udb"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

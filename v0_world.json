@@ -39,7 +39,8 @@
               "symbol": "A-G|A-SWF|WALK",
               "description": "",
               "danger_level": 2,
-              "travel_time": 2
+              "travel_time": 10,
+              "cost": 0
             }
           ]
         },
@@ -98,7 +99,8 @@
               "symbol": "A-SWF|A-G|WALK",
               "description": "",
               "danger_level": 2,
-              "travel_time": 2
+              "travel_time": 10,
+              "cost": 0
             }
           ]
         }

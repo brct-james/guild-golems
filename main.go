@@ -17,7 +17,7 @@ import (
 
 // Configuration
 
-var reloadWorldFromJSON bool = false
+var reloadWorldFromJSON bool = true
 var refreshAuthSecret bool = false
 var flushUDB bool = true
 

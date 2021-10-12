@@ -18,8 +18,8 @@ import (
 // Helper Functions
 
 // Attempt to save user, returns error or nil if successful
-func SaveUserToDB(udb rdb.Database, token string, userData schema.User) error {
-	err := udb.SetJsonData(token, ".", userData)
+func SaveUserToDB(udb rdb.Database, userData schema.User) error {
+	err := udb.SetJsonData(userData.Token, ".", userData)
 	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
 	return err
 }
@@ -32,6 +32,18 @@ func GetUdbFromCtx(r *http.Request) (rdb.Database, error) {
 		return rdb.Database{}, errors.New("could not get UserDBContext")
 	}
 	return udb, nil
+}
+
+// Attempt to get wdb from context
+func GetWdbFromCtx(w http.ResponseWriter, r *http.Request) (bool, rdb.Database) {
+	log.Debug.Println("Recover wdb from context")
+	wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database)
+	if !ok {
+		log.Error.Printf("Could not get WorldDBContext in LocationsOverview")
+		responses.SendRes(w, responses.No_WDB_Context, nil, "in LocationsOverview")
+		return false, rdb.Database{}
+	}
+	return true, wdb
 }
 
 // Attempt to get user from db
@@ -174,7 +186,7 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 	}
 	// create new user in DB
 	newUser := schema.NewUser(token, username)
-	saveUserErr := SaveUserToDB(udb, token, newUser)
+	saveUserErr := SaveUserToDB(udb, newUser)
 	if saveUserErr != nil {
 		// fail state - could not save
 		saveUserErrMsg := fmt.Sprintf("in UsernameClaim | Username: %v | CreateNewUserInDB failed, dbSaveResult: %v", username, saveUserErr)
@@ -191,13 +203,9 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 // Handler function for the route: /api/v0/locations
 func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- locationsOverview -- "))
-	log.Debug.Println("Recover wdb from context")
-	// Get wdb context
-	wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database)
-	if !ok {
-		log.Error.Printf("Could not get WorldDBContext in LocationsOverview")
-		responses.SendRes(w, responses.No_WDB_Context, nil, "in LocationsOverview")
-		return
+	wdbSuccess, wdb := GetWdbFromCtx(w, r)
+	if !wdbSuccess {
+		return // Fail state, could not get wdb, handled by func - simply return
 	}
 	// Output world info to page
 	bytes, err := wdb.GetJsonData("world", ".")

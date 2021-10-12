@@ -14,6 +14,8 @@ Go-based server for a fantasy-themed guild management game
 - Summon Golems using Mana
 - - `invokers` amplify your mana regen
 - - Mana regen is calculated every time `secureGetUser` is called
+- - `harvesters` gather resources from nodes in the world
+- Have golems travel between locations
 
 ### Endpoints
 
@@ -24,6 +26,19 @@ Go-based server for a fantasy-themed guild management game
 - `GET: /api/v0/my/golems` list all golems owned
 - `GET: /api/v0/my/golems/{archetype}` list all golems owned filtered by archetype
 - `GET: /api/v0/my/golem/{symbol}` get info on the specified golem
+- `PUT: /api/v0/my/golem/{symbol}` change golem task/status based on request body (see below)
+
+```json
+{
+    "new_status":"",
+    "instructions": {...}
+}
+```
+
+- - Where new_status is the desired task from the set [`idle`, `harvesting`, `traveling`, `invoking`]
+- - Where instructions contain key:value pairs specific to each type of activity
+- - - `idle` instructions | {}
+- - - `traveling` instructions | {"route": "A-G|A-SWF|WALK"}
 - `GET: /api/v0/my/rituals` list all known rituals
 - `GET: /api/v0/my/rituals/{ritual}` show information on a particular ritual
 - `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
@@ -38,9 +53,9 @@ See `responses.go`
 
 ### In-Progress
 
-- [In-Progress] secure.go:343 Get info on status change from request body
+- Convert all json and vars to snake_case
+- Refactor ChangeGolemTask into smaller functions
 - Golem traveling
-- Changing golem status
 - Harvesters collecting free resources from nodes
 - - v0: simply collecting X resource at location taking Y time
 
@@ -178,6 +193,7 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - - - `GET.../my/golems/{archetype}` list golems filtered by archetype
 - - `../my/golem/{symbol}` get info on and manage individual golems
 - - - `GET` gives info on the specified invoker
+- - - `PUT` allows changing the golem status to a new task
 - Rituals v0
 - - `GET .../my/rituals` list rituals
 - - - `POST .../my/rituals/summon-invoker` create new invoker
@@ -186,6 +202,9 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - - - `GET .../my/rituals/summon-harvester` information on the harvester summoning ritual
 - - User holds list of ritual keys rather than list of rituals themselves
 - Implemented the basics of the mana system and regeneration
+- Changing golem status
+- - Add travel time calculation
+- Mana calculation only counts invokers with the 'invoking' status
 
 ### v0.0.1
 
@@ -227,6 +246,7 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - https://tutorialedge.net/golang/creating-restful-api-with-golang/
 - https://github.com/joho/godotenv
 - https://github.com/golang-jwt/jwt
+- https://semaphoreci.com/community/tutorials/building-and-testing-a-rest-api-in-go-with-gorilla-mux-and-postgresql
 
 ### Design
 

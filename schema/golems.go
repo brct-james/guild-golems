@@ -11,8 +11,9 @@ import (
 type Golem struct {
 	HasSymbol
 	Archetype string `json:"archetype" binding:"required"`
-	LocationSymbol string `json:"location-symbol" binding:"required"` 
+	LocationSymbol string `json:"location_symbol" binding:"required"` 
 	Status string `json:"status" binding:"required"`
+	ArrivalTime int64 `json:"arrival_time" binding:"required"`
 }
 
 // golem statuses map
@@ -51,6 +52,13 @@ var GolemArchetypes = map[string]GolemArchetype {
 	},
 }
 
+// Defines the structure for golem status update requests
+// Instructions expects an object/map with different keys depending on newStatus
+type GolemStatusUpdateBody struct {
+	NewStatus string `json:"new_status" binding:"required"`
+	Instructions interface{} `json:"instructions" binding:"required"`
+}
+
 
 // Defines the schema for EnergyDetails - a struct containing information on golem energy
 // type EnergyDetails struct {
@@ -68,6 +76,7 @@ func NewGolem(symbol string, archetype string, startingStatus string) Golem {
 		Archetype: archetype,
 		LocationSymbol: "A-G",
 		Status: startingStatus,
+		ArrivalTime: 0,
 	}
 }
 
@@ -92,10 +101,24 @@ func DoesGolemArchetypeMatch(golem Golem, archetype string) bool {
 	return strings.EqualFold(golem.Archetype, archetype)
 }
 
+func DoesGolemStatusMatch(golem Golem, status string) bool {
+	return strings.EqualFold(golem.Status, status)
+}
+
 func FilterGolemListByArchetype(golems []Golem, archetype string) []Golem {
 	filteredList := make([]Golem, 0)
 	for _, golem := range golems {
 		if DoesGolemArchetypeMatch(golem, archetype) {
+			filteredList = append(filteredList, golem)
+		}
+	}
+	return filteredList
+}
+
+func FilterGolemListByStatus(golems []Golem, status string) []Golem {
+	filteredList := make([]Golem, 0)
+	for _, golem := range golems {
+		if DoesGolemStatusMatch(golem, status) {
 			filteredList = append(filteredList, golem)
 		}
 	}
