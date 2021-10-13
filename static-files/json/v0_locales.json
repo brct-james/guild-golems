@@ -1,18 +1,16 @@
 {
-  "locales": {
-    "A-G": {
-      "name": "Gorod",
-      "symbol": "A-G",
-      "description": "The Capital City of Astrid, ruled by The Mute Council. A great place to start a career in alchemy.",
-      "resource_node_symbols": ["A-G|FOUNTAIN-WATER"],
-      "route_symbols": ["A-G|A-SWF|WALK"]
-    },
-    "A-SWF": {
-      "name": "Scratchwood Forest",
-      "symbol": "A-SWF",
-      "description": "Peaceful during the day, dangerous at night - luckily a mage cast 'Orb of the Sun' over the forest millenia ago.",
-      "resource_node_symbols": ["A-SWF|CHOP-DEADWOOD", "A-SWF|FORAGE-HERBS"],
-      "route_symbols": ["A-SWF|A-G|WALK"]
-    }
+  "A-G": {
+    "name": "Gorod",
+    "symbol": "A-G",
+    "description": "The Capital City of Astrid, ruled by The Mute Council. A great place to start a career in alchemy.",
+    "resource_node_symbols": ["A-G|FOUNTAIN-WATER"],
+    "route_symbols": ["A-G|A-SWF|WALK"]
+  },
+  "A-SWF": {
+    "name": "Scratchwood Forest",
+    "symbol": "A-SWF",
+    "description": "Peaceful during the day, dangerous at night - luckily a mage cast 'Orb of the Sun' over the forest millenia ago.",
+    "resource_node_symbols": ["A-SWF|CHOP-DEADWOOD", "A-SWF|FORAGE-HERBS"],
+    "route_symbols": ["A-SWF|A-G|WALK"]
   }
 }

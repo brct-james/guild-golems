@@ -1,20 +1,18 @@
 {
-  "routes": {
-    "A-G|A-SWF|WALK": {
-      "name": "Walk to Scratchwood Forest",
-      "symbol": "A-G|A-SWF|WALK",
-      "description": "",
-      "danger_level": 2,
-      "travel_time": 10,
-      "cost": 0
-    },
-    "A-SWF|A-G|WALK": {
-      "name": "Walk to Gorod",
-      "symbol": "A-SWF|A-G|WALK",
-      "description": "",
-      "danger_level": 2,
-      "travel_time": 10,
-      "cost": 0
-    }
+  "A-G|A-SWF|WALK": {
+    "name": "Walk to Scratchwood Forest",
+    "symbol": "A-G|A-SWF|WALK",
+    "description": "",
+    "danger_level": 2,
+    "travel_time": 10,
+    "cost": 0
+  },
+  "A-SWF|A-G|WALK": {
+    "name": "Walk to Gorod",
+    "symbol": "A-SWF|A-G|WALK",
+    "description": "",
+    "danger_level": 2,
+    "travel_time": 10,
+    "cost": 0
   }
 }

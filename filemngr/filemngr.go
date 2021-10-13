@@ -58,9 +58,9 @@ func ReadJSON(path string) []byte {
 	if err != nil {
 		log.Error.Fatalln(err)
 	}
-	log.Info.Println("Successfully opened " + path)
+	log.Debug.Println("Successfully opened " + path)
 	defer jsonFile.Close()
-	log.Info.Println("Reading from file")
+	log.Debug.Println("Reading from file")
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	return byteValue
 }

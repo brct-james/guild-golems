@@ -441,42 +441,15 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 		}
 		// Success state, got wdb
 		// Get locale data
-		bytes, err := wdb.GetJsonData("world", ".regions")
-		if err != nil {
-			log.Error.Printf("Could not get world from DB! Err: %v", err)
-			responses.SendRes(w, responses.WDB_Get_Failure, nil, "in ChangeGolemTask")
+		locale_path := fmt.Sprintf(".%s", targetGolem.LocationSymbol)
+		curLocale, localeErr := schema.Locale_get_from_db(wdb, locale_path)
+		if localeErr != nil {
+			log.Error.Printf("Could not get locale %s from db: %v", locale_path, localeErr)
+			responses.SendRes(w, responses.WDB_Get_Failure, nil, "locale corresponding to specified golem's location could not be gotten")
 			return
 		}
-		regions := []schema.Region{}
-		err = json.Unmarshal(bytes, &regions)
-		if err != nil {
-			log.Error.Printf("Could not unmarshal world json from DB: %v", err)
-			responses.SendRes(w, responses.JSON_Unmarshal_Error, nil, "in ChangeGolemTask")
-			return
-		}
-		// Get current location slice 0: Region, 1: Locale, 
-		locationSlice := strings.Split(targetGolem.LocationSymbol, "-")
 		// Find routes for relevant locale
-		var curLocale schema.Locale
-		foundLocale := false
-		for _, region := range regions {
-			if strings.EqualFold(region.Symbol, locationSlice[0]) {
-				for _, locale := range region.Locales {
-					if strings.EqualFold(locale.Symbol, targetGolem.LocationSymbol) {
-						// Success Case
-						curLocale = locale
-						foundLocale = true
-						break
-					}
-				}
-			}
-		}
-		if !foundLocale {
-			// Fail case could not find locale
-			responses.SendRes(w, responses.No_Available_Routes, nil, "")
-			log.Error.Printf("Golem LocaleSymbol that could not be found in DB! Username: %s | Golem LocationSymbol: %s", userData.Username, targetGolem.LocationSymbol)
-		}
-		if len(curLocale.Routes) < 1 {
+		if len(curLocale.RouteSymbols) < 1 {
 			// Fail case, no routes found
 			responses.SendRes(w, responses.No_Available_Routes, nil, "")
 			log.Error.Printf("Golem has no available routes! Username: %s | Golem LocationSymbol: %s | Locale: %v", userData.Username, targetGolem.LocationSymbol, curLocale)
@@ -484,14 +457,14 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Now check for targetRoute in curLocale.Routes
-		var routeInfo schema.Route
+		var target_route_symbol string
 		routeFound := false
-		for _, route := range curLocale.Routes {
-			if strings.EqualFold(route.Symbol, targetRoute.(string)) {
+		for _, routeSymbol := range curLocale.RouteSymbols {
+			if strings.EqualFold(routeSymbol, targetRoute.(string)) {
 				// Success case, found targetRoute in curLocale.Routes
-				log.Debug.Printf("Found targetRoute in curLocal.Routes. route.Symbol: %s, targetRoute.(string): %s, route: %v", route.Symbol, targetRoute.(string), route)
+				log.Debug.Printf("Found targetRoute in curLocal.Routes. route.Symbol: %s, targetRoute.(string): %s", routeSymbol, targetRoute.(string))
 				routeFound = true
-				routeInfo = route
+				target_route_symbol = routeSymbol
 				break
 			}
 		}
@@ -501,11 +474,20 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 			responses.SendRes(w, responses.Target_Route_Unavailable, nil, "")
 			return
 		}
-		// Get destination from routeInfo
-		log.Debug.Printf("routeInfo: %v", routeInfo)
-		destinationSymbol := strings.Split(routeInfo.Symbol, "|")[1]
+		// May use later for setting route danger as well, to have a result calculated after travel completed
+		// Get route data
+		route_path := fmt.Sprintf(".%s", target_route_symbol)
+		cur_route, route_err := schema.Route_get_from_db(wdb, route_path)
+		if route_err != nil {
+			log.Error.Printf("Could not get route %s from db: %v", route_path, localeErr)
+			responses.SendRes(w, responses.WDB_Get_Failure, nil, "specified route could not be gotten")
+			return
+		}
+		// Get destination from target_route_symbol
+		log.Debug.Printf("target_route_symbol: %v", target_route_symbol)
+		destinationSymbol := strings.Split(target_route_symbol, "|")[1]
 		// Start travel
-		targetGolem.ArrivalTime = timecalc.AddSecondsToTimestamp(time.Now(), routeInfo.TravelTime).Unix()
+		targetGolem.TravelInfo.ArrivalTime = timecalc.AddSecondsToTimestamp(time.Now(), cur_route.TravelTime).Unix()
 		targetGolem.Status = "traveling"
 		targetGolem.LocationSymbol = destinationSymbol
 		// Save to DB

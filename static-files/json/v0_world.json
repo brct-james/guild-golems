@@ -1,8 +1,6 @@
 {
-  "world": {
-    "name": "Ipeiros",
-    "symbol": "IPEIROS",
-    "description": "A world with one massive continent, two significantly smaller sub-continents, and a plethora of small islands.",
-    "region_symbols": ["A", "EOW"]
-  }
+  "name": "Ipeiros",
+  "symbol": "IPEIROS",
+  "description": "A world with one massive continent, two significantly smaller sub-continents, and a plethora of small islands.",
+  "region_symbols": ["A", "EOW"]
 }

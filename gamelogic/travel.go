@@ -16,7 +16,7 @@ func CalculateTravelArrived(userData schema.User) (schema.User) {
 	for i, golem := range userData.Golems {
 		if strings.EqualFold(golem.Status, "traveling") {
 			// Success, traveling, check if complete
-			arrTime := time.Unix(golem.ArrivalTime, 0)
+			arrTime := time.Unix(golem.TravelInfo.ArrivalTime, 0)
 			now := time.Now()
 			if arrTime.Before(now) {
 				// Travel complete

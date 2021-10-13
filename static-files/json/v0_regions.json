@@ -1,18 +1,16 @@
 {
-  "locales": {
-    "A": {
-      "name": "Astrid",
-      "symbol": "A",
-      "description": "The largest nation on Ipeiros, occupies nearly 1/4th of the main continent.",
-      "border_region_symbols": ["EOW"],
-      "locale_symbols": ["A-G", "A-SWF"]
-    },
-    "EOW": {
-      "name": "End of the World",
-      "symbol": "EOW",
-      "description": "A desolate void.",
-      "border_region_symbols": ["A"],
-      "locale_symbols": []
-    }
+  "A": {
+    "name": "Astrid",
+    "symbol": "A",
+    "description": "The largest nation on Ipeiros, occupies nearly 1/4th of the main continent.",
+    "border_region_symbols": ["EOW"],
+    "locale_symbols": ["A-G", "A-SWF"]
+  },
+  "EOW": {
+    "name": "End of the World",
+    "symbol": "EOW",
+    "description": "A desolate void.",
+    "border_region_symbols": ["A"],
+    "locale_symbols": []
   }
 }

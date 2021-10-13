@@ -13,8 +13,16 @@ type Golem struct {
 	Archetype string `json:"archetype" binding:"required"`
 	LocationSymbol string `json:"location_symbol" binding:"required"` 
 	Status string `json:"status" binding:"required"`
-	ArrivalTime int64 `json:"arrival_time" binding:"required"`
 	Capacity float64 `json:"capacity" binding:"required"`
+	TravelInfo GolemTravelInfo `json:"travel_info" binding:"required"`
+}
+
+// Defines relevant info for golems while traveling
+type GolemTravelInfo struct {
+	ArrivalTime int64 `json:"arrival_time" binding:"required"`
+	OriginSymbol string `json:"origin_symbol" binding:"required"`
+	DestinationSymbol string `json:"destination_symbol" binding:"required"`
+	RouteDanger int `json:"route_danger" binding:"required"`
 }
 
 // golem statuses map
@@ -77,8 +85,13 @@ func NewGolem(symbol string, archetype string, startingStatus string, capacity f
 		Archetype: archetype,
 		LocationSymbol: "A-G",
 		Status: startingStatus,
-		ArrivalTime: 0,
 		Capacity: capacity,
+		TravelInfo: GolemTravelInfo{
+			ArrivalTime: 0,
+			OriginSymbol: "",
+			DestinationSymbol: "",
+			RouteDanger: 0,
+		},
 	}
 }
 

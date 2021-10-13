@@ -1,10 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"reflect"
 
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/filemngr"
@@ -21,7 +18,12 @@ var reloadWorldFromJSON bool = true
 var refreshAuthSecret bool = false
 var flushUDB bool = true
 
-var worldJSONPath string = "./v0_world.json"
+var worldJSONPath string = "./static-files/json/v0_world.json"
+var regionJSONPath string = "./static-files/json/v0_regions.json"
+var localeJSONPath string = "./static-files/json/v0_locales.json"
+var resourceJSONPath string = "./static-files/json/v0_resources.json"
+var resourceNodeJSONPath string = "./static-files/json/v0_resource_nodes.json"
+var routeJSONPath string = "./static-files/json/v0_routes.json"
 
 // Game Configuration
 // in user-metrics.go: activityThresholdInMinutes controls what users are considered 'active'
@@ -72,44 +74,85 @@ func main() {
 	auth.LoadSecretsToEnv()
 
 	// Begin serving
-	handleRequests()
+	handle_requests()
 }
 
 // Load world file from json and save it to world database
 func initializeWorldDB(wdb rdb.Database) {
-	log.Info.Println("Unmarshaling world.json")
-	var res schema.World
-	err := json.Unmarshal(filemngr.ReadJSON(worldJSONPath), &res)
-	if err != nil {
-		log.Error.Fatalf("Could not unmarshal world.json: %v", err)
+	// --World--
+	world, world_json_err := schema.World_unmarshal_json(filemngr.ReadJSON(worldJSONPath))
+	if world_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal world json: %v", world_json_err)
 	}
+	world_save_err := schema.World_save_to_db(wdb, world)
+	if world_save_err != nil {
+		// Fail state, crash as world required
+		log.Error.Fatalf("Failed saving world during wdb init, err: %v", world_save_err)
+	}
+	schema.Test_world_initialized(wdb, world)
 
-	log.Info.Println("Saving json to DB")
-	log.Debug.Printf("Json value:\n%v\n", res)
-	err = wdb.SetJsonData("world",".",res)
-	if err != nil {
-		log.Error.Fatalf("Could not save world to DB: %v", err)
+	// --Regions--
+	regions, region_json_err := schema.Region_unmarshal_all_json(filemngr.ReadJSON(regionJSONPath))
+	if region_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal region json: %v", region_json_err)
 	}
+	region_save_err := schema.Region_save_all_to_db(wdb, regions)
+	if region_save_err != nil {
+		// Fail state, crash as region required
+		log.Error.Fatalf("Failed saving region during wdb init, err: %v", region_save_err)
+	}
+	schema.Test_region_initialized(wdb, regions)
 
-	log.Debug.Printf("Getting world to ensure saved:\n")
-	bytes, err := wdb.GetJsonData("world", ".")
-	if err != nil {
-		log.Error.Fatalf("Could not read world from DB: %v", err)
+	// --Locales--
+	locales, locale_json_err := schema.Locale_unmarshal_all_json(filemngr.ReadJSON(localeJSONPath))
+	if locale_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal locale json: %v", locale_json_err)
 	}
+	locale_save_err := schema.Locale_save_all_to_db(wdb, locales)
+	if locale_save_err != nil {
+		// Fail state, crash as locale required
+		log.Error.Fatalf("Failed saving locale during wdb init, err: %v", locale_save_err)
+	}
+	schema.Test_locale_initialized(wdb, locales)
 
-	worldData := schema.World{}
-	unmarshalErr := json.Unmarshal(bytes, &worldData)
-	if unmarshalErr != nil {
-		log.Error.Fatalf("Could not unmarshal world json from DB: %v", unmarshalErr)
+	// --Routes--
+	routes, route_json_err := schema.Route_unmarshal_all_json(filemngr.ReadJSON(routeJSONPath))
+	if route_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal route json: %v", route_json_err)
 	}
-	success := fmt.Sprintf("%v", reflect.DeepEqual(worldData, res))
-	log.Test.Printf("DOES WORLD IN DB DEEPEQUAL WORLD FROM JSON? %s", log.TestOutput(success, "true"))
-	if success != "true" {
-		panic("FAILED TEST WHILE INITIALIZING WORLD DB, LOADED JSON NOT MATCH DATABASE")
+	route_save_err := schema.Route_save_all_to_db(wdb, routes)
+	if route_save_err != nil {
+		// Fail state, crash as route required
+		log.Error.Fatalf("Failed saving route during wdb init, err: %v", route_save_err)
 	}
+	schema.Test_route_initialized(wdb, routes)
+
+	// --Resources--
+	resources, resource_json_err := schema.Resource_unmarshal_all_json(filemngr.ReadJSON(resourceJSONPath))
+	if resource_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal resource json: %v", resource_json_err)
+	}
+	resource_save_err := schema.Resource_save_all_to_db(wdb, resources)
+	if resource_save_err != nil {
+		// Fail state, crash as resource required
+		log.Error.Fatalf("Failed saving resource during wdb init, err: %v", resource_save_err)
+	}
+	schema.Test_resource_initialized(wdb, resources)
+
+	// --Resource Nodes--
+	resourceNodes, resourceNode_json_err := schema.ResourceNode_unmarshal_all_json(filemngr.ReadJSON(resourceNodeJSONPath))
+	if resourceNode_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal resourcenode json: %v", resourceNode_json_err)
+	}
+	resourceNode_save_err := schema.ResourceNode_save_all_to_db(wdb, resourceNodes)
+	if resourceNode_save_err != nil {
+		// Fail state, crash as resourcenode required
+		log.Error.Fatalf("Failed saving resourcenode during wdb init, err: %v", resourceNode_save_err)
+	}
+	schema.Test_resourcenode_initialized(wdb, resourceNodes)
 }
 
-func handleRequests() {
+func handle_requests() {
 	//mux router
 	mxr := mux.NewRouter().StrictSlash(true)
 	mxr.Use(handlers.GenerateHandlerMiddlewareFunc(userDatabase,worldDatabase))

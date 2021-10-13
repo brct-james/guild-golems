@@ -2,7 +2,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 
 // Attempt to save user, returns error or nil if successful
 func SaveUserToDB(udb rdb.Database, userData schema.User) error {
+	log.Debug.Printf("Saving user %s to DB", userData.Username)
 	err := udb.SetJsonData(userData.Token, ".", userData)
 	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
 	return err
@@ -40,8 +40,8 @@ func GetWdbFromCtx(w http.ResponseWriter, r *http.Request) (bool, rdb.Database) 
 	log.Debug.Println("Recover wdb from context")
 	wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database)
 	if !ok {
-		log.Error.Printf("Could not get WorldDBContext in LocationsOverview")
-		responses.SendRes(w, responses.No_WDB_Context, nil, "in LocationsOverview")
+		log.Error.Printf("Could not get WorldDBContext")
+		responses.SendRes(w, responses.No_WDB_Context, nil, "")
 		return false, rdb.Database{}
 	}
 	return true, wdb
@@ -250,20 +250,58 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 	if !wdbSuccess {
 		return // Fail state, could not get wdb, handled by func - simply return
 	}
-	// Output world info to page
-	bytes, err := wdb.GetJsonData("world", ".")
-	if err != nil {
-		log.Error.Printf("Could not get world from DB! Err: %v", err)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "in LocationsOverview")
+	var world schema.World
+	var regions map[string]schema.Region
+	var locales map[string]schema.Locale
+	var routes map[string]schema.Route
+	var resources map[string]schema.Resource
+	var resourceNodes map[string]schema.ResourceNode
+
+	world, worldErr := schema.World_get_from_db(wdb, ".")
+	if worldErr != nil {
+		log.Error.Printf("Could not get world from DB! Err: %v", worldErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get world")
 		return
 	}
-	worldData := schema.World{}
-	err = json.Unmarshal(bytes, &worldData)
-	if err != nil {
-		log.Error.Printf("Could not unmarshal world json from DB: %v", err)
-		responses.SendRes(w, responses.JSON_Unmarshal_Error, nil, "in LocationsOverview")
+	regions, regionsErr := schema.Region_get_all_from_db(wdb)
+	if regionsErr != nil {
+		log.Error.Printf("Could not get regions from DB! Err: %v", regionsErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get regions")
 		return
 	}
-	responses.SendRes(w, responses.Generic_Success, worldData, "")
+	locales, localesErr := schema.Locale_get_all_from_db(wdb)
+	if localesErr != nil {
+		log.Error.Printf("Could not get locales from DB! Err: %v", localesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get locales")
+		return
+	}
+	routes, routesErr := schema.Route_get_all_from_db(wdb)
+	if routesErr != nil {
+		log.Error.Printf("Could not get routes from DB! Err: %v", routesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get routes")
+		return
+	}
+	resources, resourcesErr := schema.Resource_get_all_from_db(wdb)
+	if resourcesErr != nil {
+		log.Error.Printf("Could not get resources from DB! Err: %v", resourcesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get resources")
+		return
+	}
+	resourceNodes, resourceNodesErr := schema.ResourceNode_get_all_from_db(wdb)
+	if resourceNodesErr != nil {
+		log.Error.Printf("Could not get resourceNodes from DB! Err: %v", resourceNodesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get resourceNodes")
+		return
+	}
+
+	res := schema.WorldSummaryResponse{
+		World: world,
+		Regions: regions,
+		Locales: locales,
+		Routes: routes,
+		Resources: resources,
+		ResourceNodes: resourceNodes,
+	}
+	responses.SendRes(w, responses.Generic_Success, res, "")
 	log.Debug.Println(log.Cyan("-- End locationsOverview -- "))
 }

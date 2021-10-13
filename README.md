@@ -63,10 +63,6 @@ See `responses.go`
 
 ### In-Progress
 
-- **[In-Progress]** Refactor world into multiple parts, e.g. world, regions, locales as separate json & database entries
-- - Linked by symbols, no hierarchy
-- - Json stored in individual files, loaded into `regions` `locales` maps e.g. `map[string]etc` where the string is Symbol for DB
-- - - **[TODO]** I have split json out and updated schema files, need to update both how the world is loaded from json into the DB, create some helper functions in the world schema for accessing the data, and update everything that uses the WDB with the new functions
 - Refactor ChangeGolemTask into smaller functions
 - Harvesters collecting free resources from nodes
 - - Handle node quantities later - there are race conditions and nonsense to think about that are overly complex for v0
@@ -197,6 +193,10 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - - `GET .../users`
 - - Implemented `metrics` package to handle these and other metrics
 - Split timecalc functions into their own package
+- Refactored world into multiple parts, e.g. world, regions, locales as separate json & database entries
+- - Linked by symbols, no hierarchy
+- - Json stored in individual files, loaded into `regions` `locales` etc maps e.g. `map[string]etc` where the string is Symbol for DB
+- - - I have split json out and updated schema files, updated how the world is loaded from json into the DB, created some helper functions in the world schema for accessing the data, and updated everything that uses the WDB with the new functions
 
 ### v0.0.1
 
