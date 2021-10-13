@@ -2,13 +2,13 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/log"
+	"github.com/brct-james/guild-golems/metrics"
 	"github.com/brct-james/guild-golems/rdb"
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
@@ -17,9 +17,10 @@ import (
 
 // Helper Functions
 
-// Attemmpt to save user, returns error or nil if successful
-func SaveUserToDB(udb rdb.Database, token string, userData schema.User) error {
-	err := udb.SetJsonData(token, ".", userData)
+// Attempt to save user, returns error or nil if successful
+func SaveUserToDB(udb rdb.Database, userData schema.User) error {
+	log.Debug.Printf("Saving user %s to DB", userData.Username)
+	err := udb.SetJsonData(userData.Token, ".", userData)
 	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
 	return err
 }
@@ -32,6 +33,46 @@ func GetUdbFromCtx(r *http.Request) (rdb.Database, error) {
 		return rdb.Database{}, errors.New("could not get UserDBContext")
 	}
 	return udb, nil
+}
+
+// Attempt to get wdb from context
+func GetWdbFromCtx(w http.ResponseWriter, r *http.Request) (bool, rdb.Database) {
+	log.Debug.Println("Recover wdb from context")
+	wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database)
+	if !ok {
+		log.Error.Printf("Could not get WorldDBContext")
+		responses.SendRes(w, responses.No_WDB_Context, nil, "")
+		return false, rdb.Database{}
+	}
+	return true, wdb
+}
+
+// Attempt to get user from db
+func publicGetUser(w http.ResponseWriter, r *http.Request, username string, token string) (bool, schema.User, rdb.Database) {
+	// Get udb from context
+	udb, udbErr := GetUdbFromCtx(r)
+	if udbErr != nil {
+		// Fail state getting context
+		log.Error.Printf("Could not get UserDBContext in publicGetUser")
+		responses.SendRes(w, responses.No_UDB_Context, nil, "in publicGetUser")
+		return false, schema.User{}, rdb.Database{}
+	}
+	// Check db for user
+	thisUser, userFound, getUserErr := schema.GetUserFromDB(token, udb)
+	if getUserErr != nil {
+		// fail state
+		getErrorMsg := fmt.Sprintf("in publicGetUser, could not get from DB for username: %s, error: %v", username, getUserErr)
+		responses.SendRes(w, responses.UDB_Get_Failure, nil, getErrorMsg)
+		return false, schema.User{}, rdb.Database{}
+	}
+	if !userFound {
+		// fail state - user not found
+		userNotFoundMsg := fmt.Sprintf("in publicGetUser, no user found in DB with username: %s", username)
+		responses.SendRes(w, responses.User_Not_Found, nil, userNotFoundMsg)
+		return false, schema.User{}, rdb.Database{}
+	}
+	// Success case
+	return true, thisUser, udb
 }
 
 // Handler Functions
@@ -57,23 +98,56 @@ func V0Status(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End v0Status --"))
 }
 
+// Handler function for the route: /api/v0/leaderboards
+func LeaderboardDescriptions(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- LeaderboardDescriptions --"))
+	boards := make([]schema.Leaderboard, 0)
+	for _, b := range schema.Leaderboards {
+		boards = append(boards, b)
+	}
+	response := schema.GetLeaderboardDescriptionResponses(boards)
+	responses.SendRes(w, responses.Generic_Success, response, "")
+	log.Debug.Println(log.Cyan("-- End LeaderboardDescriptions --"))
+}
+
+// Handler function for the route: /api/v0/leaderboards/{board}
+func GetLeaderboards(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- GetLeaderboards --"))
+	route_vars := mux.Vars(r)
+	boardKey := route_vars["board"]
+	board, ok := schema.Leaderboards[boardKey]
+	if !ok {
+		// Fail state, board not found
+		responses.SendRes(w, responses.Leaderboard_Not_Found, nil, "")
+		return
+	}
+	responses.SendRes(w, responses.Generic_Success, board, "")
+	log.Debug.Println(log.Cyan("-- End GetLeaderboards --"))
+}
+
+// - `.../users` users summary (e.g. unique, active - call in last 5 min, etc.) example:
+// ```json
+// {
+//   "uniqueUsers": ["Greenitthe", ...],
+//   "activeUsers": ["Greenitthe", ...],
+//   "usersWithAchievement": {
+//     "ratelimited": ["Greenitthe", ...],
+//     "first_million": ["Greenitthe", ...],
+//     ...
+//   }
+// }
+// ```
 // Handler function for the route: /api/v0/users
 func UsersSummary(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- usersSummary --"))
-	responses.SendRes(w, responses.Unimplemented, nil, "usersSummary")
+	res := metrics.AssembleUsersMetrics()
+	responses.SendRes(w, responses.Generic_Success, res, "")
 	log.Debug.Println(log.Cyan("-- End usersSummary --"))
 }
 
 // Handler function for the route: /api/v0/users/{username}
 func UsernameInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- usernameInfo --"))
-	udb, udbErr := GetUdbFromCtx(r)
-	if udbErr != nil {
-		// Fail state getting context
-		log.Error.Printf("Could not get UserDBContext in UsernameInfo")
-		responses.SendRes(w, responses.No_UDB_Context, nil, "in UsernameInfo")
-		return
-	}
 	// Get username from route
 	route_vars := mux.Vars(r)
 	username := route_vars["username"]
@@ -87,23 +161,14 @@ func UsernameInfo(w http.ResponseWriter, r *http.Request) {
 		responses.SendRes(w, responses.Generate_Token_Failure, nil, genErrorMsg)
 		return
 	}
-	userData, userFound, getError := schema.GetUserFromDB(token, udb)
-	if getError != nil {
-		// fail state
-		getErrorMsg := fmt.Sprintf("in UsernameInfo, could not get from DB for username: %s, error: %v", username, getError)
-		responses.SendRes(w, responses.UDB_Get_Failure, nil, getErrorMsg)
-		return
-	}
-	if !userFound {
-		// fail state - user not found
-		userNotFoundMsg := fmt.Sprintf("in UsernameInfo, no user found in DB with username: %s", username)
-		responses.SendRes(w, responses.User_Not_Found, nil, userNotFoundMsg)
-		return
+	OK, userData, _ := publicGetUser(w, r, username, token)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
 	}
 	// success state
 	resData := schema.PublicUserInfo{
 		Username: userData.Username,
-		Tagline: userData.Tagline,
+		Title: userData.Title,
 		Coins: userData.Coins,
 		UserSince: userData.UserSince,
 	}
@@ -162,7 +227,7 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 	}
 	// create new user in DB
 	newUser := schema.NewUser(token, username)
-	saveUserErr := SaveUserToDB(udb, token, newUser)
+	saveUserErr := SaveUserToDB(udb, newUser)
 	if saveUserErr != nil {
 		// fail state - could not save
 		saveUserErrMsg := fmt.Sprintf("in UsernameClaim | Username: %v | CreateNewUserInDB failed, dbSaveResult: %v", username, saveUserErr)
@@ -171,36 +236,72 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Created successfully
+	// Track in user metrics
+	metrics.TrackNewUser(username)
 	log.Debug.Printf("Generated token %s and claimed username %s", token, username)
-	responses.SendRes(w, 1, newUser, "")
+	responses.SendRes(w, responses.Generic_Success, newUser, "")
 	log.Debug.Println(log.Cyan("-- End usernameClaim --"))
 }
 
 // Handler function for the route: /api/v0/locations
 func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- locationsOverview -- "))
-	log.Debug.Println("Recover wdb from context")
-	// Get wdb context
-	wdb, ok := r.Context().Value(WorldDBContext).(rdb.Database)
-	if !ok {
-		log.Error.Printf("Could not get WorldDBContext in LocationsOverview")
-		responses.SendRes(w, responses.No_WDB_Context, nil, "in LocationsOverview")
+	wdbSuccess, wdb := GetWdbFromCtx(w, r)
+	if !wdbSuccess {
+		return // Fail state, could not get wdb, handled by func - simply return
+	}
+	var world schema.World
+	var regions map[string]schema.Region
+	var locales map[string]schema.Locale
+	var routes map[string]schema.Route
+	var resources map[string]schema.Resource
+	var resourceNodes map[string]schema.ResourceNode
+
+	world, worldErr := schema.World_get_from_db(wdb, ".")
+	if worldErr != nil {
+		log.Error.Printf("Could not get world from DB! Err: %v", worldErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get world")
 		return
 	}
-	// Output world info to page
-	bytes, err := wdb.GetJsonData("world", ".")
-	if err != nil {
-		log.Error.Printf("Could not get world from DB! Err: %v", err)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "in LocationsOverview")
+	regions, regionsErr := schema.Region_get_all_from_db(wdb)
+	if regionsErr != nil {
+		log.Error.Printf("Could not get regions from DB! Err: %v", regionsErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get regions")
 		return
 	}
-	worldData := schema.World{}
-	err = json.Unmarshal(bytes, &worldData)
-	if err != nil {
-		log.Error.Printf("Could not unmarshal world json from DB: %v", err)
-		responses.SendRes(w, responses.JSON_Unmarshal_Error, nil, "in LocationsOverview")
+	locales, localesErr := schema.Locale_get_all_from_db(wdb)
+	if localesErr != nil {
+		log.Error.Printf("Could not get locales from DB! Err: %v", localesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get locales")
 		return
 	}
-	responses.SendRes(w, responses.Generic_Success, worldData, "")
+	routes, routesErr := schema.Route_get_all_from_db(wdb)
+	if routesErr != nil {
+		log.Error.Printf("Could not get routes from DB! Err: %v", routesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get routes")
+		return
+	}
+	resources, resourcesErr := schema.Resource_get_all_from_db(wdb)
+	if resourcesErr != nil {
+		log.Error.Printf("Could not get resources from DB! Err: %v", resourcesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get resources")
+		return
+	}
+	resourceNodes, resourceNodesErr := schema.ResourceNode_get_all_from_db(wdb)
+	if resourceNodesErr != nil {
+		log.Error.Printf("Could not get resourceNodes from DB! Err: %v", resourceNodesErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get resourceNodes")
+		return
+	}
+
+	res := schema.WorldSummaryResponse{
+		World: world,
+		Regions: regions,
+		Locales: locales,
+		Routes: routes,
+		Resources: resources,
+		ResourceNodes: resourceNodes,
+	}
+	responses.SendRes(w, responses.Generic_Success, res, "")
 	log.Debug.Println(log.Cyan("-- End locationsOverview -- "))
 }

@@ -1,0 +1,46 @@
+{
+  "A-G|FOUNTAIN-WATER": {
+    "name": "Fill Water Bucket at a Fountain",
+    "symbol": "A-G|FOUNTAIN-WATER",
+    "description": "Ah, running water, conveniently located within 100m. Functionally infinite.",
+    "harvest_time": 1,
+    "drop_tables": [
+      {
+        "resource_symbol": "WATER",
+        "harvest_amount": 10,
+        "rarity": 1
+      }
+    ]
+  },
+  "A-SWF|CHOP-DEADWOOD": {
+    "name": "Chop Fallen Trees",
+    "symbol": "A-SWF|CHOP-DEADWOOD",
+    "description": "Dead trees, for your convenience",
+    "harvest_time": 2,
+    "drop_tables": [
+      {
+        "resource_symbol": "LOGS",
+        "harvest_amount": 1,
+        "rarity": 1
+      }
+    ]
+  },
+  "A-SWF|FORAGE-HERBS": {
+    "name": "Forage for Herbs",
+    "symbol": "A-SWF|FORAGE-HERBS",
+    "description": "+1 to botany",
+    "harvest_time": 1,
+    "drop_tables": [
+      {
+        "resource_symbol": "HERBS",
+        "harvest_amount": 10,
+        "rarity": 1
+      },
+      {
+        "resource_symbol": "PEPPERMINT",
+        "harvest_amount": 1,
+        "rarity": 0.1
+      }
+    ]
+  }
+}
