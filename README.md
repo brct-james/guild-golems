@@ -268,37 +268,6 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - - Json stored in individual files, loaded into `regions` `locales` etc maps e.g. `map[string]etc` where the string is Symbol for DB
 - - - I have split json out and updated schema files, updated how the world is loaded from json into the DB, created some helper functions in the world schema for accessing the data, and updated everything that uses the WDB with the new functions
 
----
-
-### v0.0.1
-
-- Added user db, world db
-- - World db can be loaded from json
-- Automatically generates access secret
-- Added `GET: /api/v0/locations`
-- - Refactored locationsOverview
-- Added `GET: /api/v0/users/{username}`
-- - Refactored usernameInfo
-- Added `POST: /api/v0/users/{username}/claim`
-- - Refactored usernameClaim
-- All other holdover general endpoints have had their placeholder info refactored
-- Added user schema
-- - user.go defines not only the `User` struct but also the `PublicUserInfo` struct as well as `NewUser()`, `CheckForExistingUser()`, and `GetUserFromDB()` funcs
-- - - I decided to put these in the schema files for now, as that makes the most sense IMO - rdb is just for interacting with the DB, it shouldn't have anything to do with the data
-- Renamed handlers/general to handlers/public
-- Refactored handlers/secure
-- Refactored auth/token-validation
-- Added `GET: /api/v0/my/account`
-- - Requires bearer token authorization header, provides full user info
-- responses now return error instead of panicing if json prettification fails...
-- error messages now include code literal meaning as first part of message
-
----
-
-### v0.0.0
-
-- Initialization
-
 ## Reference
 
 ### Technical
