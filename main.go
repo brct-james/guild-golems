@@ -36,7 +36,7 @@ var dbMap = map[string]int{
 
 // Global Vars
 
-var apiVersion string = "v0.0.1"
+var apiVersion string = "v0.0.3"
 var (
 	ListenPort = ":50242"
 	RedisAddr = "localhost:6380"
