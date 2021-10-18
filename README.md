@@ -67,6 +67,8 @@ See `responses.go`
 
 ## Roadmap
 
+Versioning Convention: `major.minor.hotfix`
+
 ---
 
 ### Ongoing
@@ -78,46 +80,48 @@ See `responses.go`
 
 ### In-Progress
 
-**[v0.0.3]** Harvesters v0
+**[v0.3]** Harvesters v0
 
 - Harvesters collecting free resources from nodes
 - - v0: simply collecting X resource at location taking Y time
 
-**[v0.0.3]** Game Variables Refactor
+**[v0.3]** Game Variables Refactor
 
 - Game variables should be defined in gamelogic, for example, golem capacity `gamelogic.InvokerCapacity`
 - - Refactor and ensure this is occurring throughout the code
 
 ### Planned: v0.0.5 MVP
 
-**[v0.0.4]** Inventories v0
+**[v0.4]** Inventories v0
 
 - `.../my/inventory` inventory report showing what resources are at each location
 - `.../my/couriers` transporting materials between two locations
 - - v0: simply moving resources between locations, based on a set speed and capacity
 - - how will inventories work? one thought is giving each golem an inventory, another is having a localized inventory for each area per-player. most likely want to harvest into a local inventory, moved between locales by loading and unloading from golem inventories
 
-**[v0.0.5]** Merchants v0
+**[v0.5]** Merchants v0
 
 - `.../my/merchants` buying/selling
 - - v0: simple buy and sell tasks at set market prices
 
 ---
 
-### Planned: v0.1.0 MVP
+### Planned: v1 MVP
 
-**[v0.0.6]** Rituals v0
+**[v0.6]** Rituals v0
 
 - cast spells
 - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
 - `rituals` should be loaded from json into memory, User.KnownRituals should instead store the symbols and the ListRituals handler should lookup the rituals from the json map
 
-**[v0.0.7]** Various Refactors
+**[v0.7]** Various Refactors & Tests
 
 - Refactor the bloat in schema & handlers (helper funcs) into more appropriate locations
 - Convert all routes to kebab-case, all json and private vars/funcs to snake_case
+- Refactor large funcs
+- Write tests
 
-**[v0.0.7]** Various Endpoints & Merchants FOW
+**[v0.7]** Various Endpoints & Merchants FOW
 
 - `/api` information on each api version like basic live/down status (future - once multiple versions are live)
 - `/api/v0` v0 api status as well as intresting metrics in the data field (totalCoins in circulation, totalCalls made to server, lastWipeTimestamp, avgServerTicksPerSecond in a rolling minute, etc.)
@@ -125,42 +129,43 @@ See `responses.go`
 - `.../my/merchants`
 - - v0: basic fog of war, as using this route to get market listings, so merchants must be at a location to get the values of that route
 
-**[v0.0.8]** Achievements v0
+**[v0.8]** Achievements v0
 
 - Achievements like "first million" (hit 1,000,000 coins) or "ratelimited" (X calls in the last hour).
 - Tracked per person as well as for leaderboards
 - Provide incremental goals to grow into
 - `.../achievements` info on each achievement like name, description/criteria, list of players with it, etc.
 
-**[v0.0.8]** Caching/Metrics v0
+**[v0.8]** Caching/Metrics v0
 
 - generate leaderboards every 15/30/60 minutes and cache them, same for location info (esp. #golems at each location) and calls per hour
 - rework `/locations` routes to be more specific, include list of users with golems at each location and how many
 - Calculate and cache leaderboards in metric-db
 - Tracking all users ever registered, persistent through wipes in metric-db
 
-**[v0.0.9]** Ratelimiting v0
+**[v0.9]** Ratelimiting v0
 
 - Per-IP hard limit, slightly higher than per-token limit
 - Per-IP route-specific hard limit for claiming usernames
 - Per-Token limit
 - Perhaps using [toolbooth](https://github.com/didip/tollbooth)
 
-**[v0.1.0]** Site UI v0
+**[v1.0]** Site UI v0
 
 - `/` UI homepage with info on the game
 - `/docs` documentation route
+- Rework readme features section
 
 ---
 
-### Planned: v0.1.5 MVP
+### Planned: Post-1.0
 
-**[v0.1.1]** Artisans v0
+**[v1.1]** Artisans v0
 
 - `.../my/artisans` converting resources into products
 - - v0 will just see simple recipes, "make 2 C using 2 A and 3 B". In the future there will be more depth, perhaps with quality or yield implications to identifying the right ratio of resources (e.g. A+B always yields C between X and Y ratio, but has max yield at some particular ratio) and/or techniques or tools that change recipes and will be complicated with multiple steps for higher tier products
 
-**[v0.1.2]** Engineers v0
+**[v1.2]** Engineers v0
 
 - `.../my/engineers` building structures in the world
 - - perhaps each location's central inventory can be upgraded, could construct warehouses at each location to hold more
@@ -168,7 +173,7 @@ See `responses.go`
 - - pull resources while in 'building' status from the local inventory
 - - more engineers present build faster
 
-**[v0.1.3]** Resource Node Quantities and Replenishment
+**[v1.3]** Resource Node Quantities and Replenishment
 
 - Add node quantities to resource nodes, along with replenishment
 - - Figure out a good way to balance this with race conditions when multiple users harvest at once, and replenishment having an unknown number of people harvesting at once
@@ -230,13 +235,13 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 
 ## Changelog
 
-### v0.0.3
+### v0.3
 
 - Refactored ChangeGolemTask into smaller functions
 
 ---
 
-### v0.0.2
+### v0.2
 
 - Golems v0
 - - Golems are created via rituals
