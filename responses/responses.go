@@ -48,6 +48,8 @@ const (
 	Target_Route_Unavailable ResponseCode = 22
 	UDB_Update_Failed ResponseCode = 23
 	Leaderboard_Not_Found ResponseCode = 24
+	No_Resource_Nodes_At_Location ResponseCode = 25
+	Target_Resource_Node_Unavailable ResponseCode = 26
 )
 
 // Defines Response structure for output
@@ -118,6 +120,10 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[UDB_Update_Failed] Could not complete request due to error while saving user data to udb"
 	case 24:
 		message = "[Leaderboard_Not_Found] Requested leaderboard not found"
+	case 25:
+		message = "[No_Resource_Nodes_At_Location] No resources nodes found at the location of the specified golem"
+	case 26:
+		message = "[Target_Resource_Node_Unavailable] The specified resource node is not available at the current location"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

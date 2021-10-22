@@ -30,6 +30,33 @@ const (
 	WorldDBContext
 )
 
+// Gets ResourceNode for target_node if in the locale specified by locale_path
+func getTargetResNodeFromLocale(w http.ResponseWriter, r *http.Request, locale_path string, target_node string) (bool, schema.ResourceNode) {
+	// Get wdb
+	wdbSuccess, wdb := GetWdbFromCtx(w, r)
+	if !wdbSuccess {
+		log.Debug.Printf("Could not get wdb from ctx")
+		return false, schema.ResourceNode{} // Fail state, could not get wdb, handled by func - simply return
+	}
+	// Success state, got wdb
+	// Get locale data from db
+	cur_locale, localeErr := schema.Locale_get_from_db(wdb, locale_path)
+	if localeErr != nil {
+		log.Error.Printf("Could not get locale %s from db: %v", locale_path, localeErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "locale corresponding to specified golem's location could not be gotten")
+		return false, schema.ResourceNode{}
+	}
+	// Find resNodes for relevant locale
+	if len(cur_locale.ResourceNodeSymbols) < 1 {
+		// Fail case, no resNodes found
+		log.Error.Printf("Golem has no available resource nodes! locale_path: %s | target_node: %s | Locale: %v", locale_path, target_node, cur_locale)
+		responses.SendRes(w, responses.No_Resource_Nodes_At_Location, nil, "")
+		return false, schema.ResourceNode{}
+	}
+	foundTargetNode, res_node := getResNodeDataIfTargetNodeInCurLocaleNodes(w, r, wdb, cur_locale, target_node)
+	return foundTargetNode, res_node
+}
+
 // Gets route for target_route if in the locale specified by locale_path
 func getTargetRouteFromLocale(w http.ResponseWriter, r *http.Request, locale_path string, target_route string) (bool, schema.Route) {
 	// Get wdb
@@ -49,12 +76,44 @@ func getTargetRouteFromLocale(w http.ResponseWriter, r *http.Request, locale_pat
 	// Find routes for relevant locale
 	if len(cur_locale.RouteSymbols) < 1 {
 		// Fail case, no routes found
-		responses.SendRes(w, responses.No_Available_Routes, nil, "")
 		log.Error.Printf("Golem has no available routes! locale_path: %s | target_route: %s | Locale: %v", locale_path, target_route, cur_locale)
+		responses.SendRes(w, responses.No_Available_Routes, nil, "")
 		return false, schema.Route{}
 	}
 	foundTargetRoute, route := getRouteDataIfTargetRouteInCurLocaleRoutes(w, r, wdb, cur_locale, target_route)
 	return foundTargetRoute, route
+}
+
+// Gets ResourceNode for target_node if in cur_locale's defined ResourceNodes
+func getResNodeDataIfTargetNodeInCurLocaleNodes(w http.ResponseWriter, r *http.Request, wdb rdb.Database, cur_locale schema.Locale, target_node string) (bool, schema.ResourceNode) {
+	// Now check for target_node in curLocale.ResourceNodes
+	var target_node_symbol string
+	nodeFound := false
+	for _, nodeSymbol := range cur_locale.ResourceNodeSymbols {
+		if strings.EqualFold(nodeSymbol, target_node) {
+			// Success case, found target_node in curLocale.ResourceNodes
+			log.Debug.Printf("Found target_node in curLocale.ResourceNodes. node.Symbol: %s, target_node.(string): %s", nodeSymbol, target_node)
+			nodeFound = true
+			target_node_symbol = nodeSymbol
+			break
+		}
+	}
+	if !nodeFound {
+		// Fail case, target_node not in curLocale.ResourceNodes
+		log.Debug.Printf("target_node not in curLocale.ResourceNodes")
+		responses.SendRes(w, responses.Target_Resource_Node_Unavailable, nil, "")
+		return false, schema.ResourceNode{}
+	}
+
+	// Get node data
+	res_node_path := fmt.Sprintf("[\"%s\"]", target_node_symbol)
+	cur_res_node, res_node_err := schema.ResourceNode_get_from_db(wdb, res_node_path)
+	if res_node_err != nil {
+		log.Error.Printf("Could not get resnode %s from db: %v", res_node_path, res_node_err)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "specified res node could not be gotten")
+		return false, schema.ResourceNode{}
+	}
+	return true, cur_res_node
 }
 
 // Gets route for target_route if in cur_locale's defined routes
@@ -79,7 +138,7 @@ func getRouteDataIfTargetRouteInCurLocaleRoutes(w http.ResponseWriter, r *http.R
 	}
 
 	// Get route data
-	route_path := fmt.Sprintf(".%s", target_route_symbol)
+	route_path := fmt.Sprintf("[\"%s\"]", target_route_symbol)
 	cur_route, route_err := schema.Route_get_from_db(wdb, route_path)
 	if route_err != nil {
 		log.Error.Printf("Could not get route %s from db: %v", route_path, route_err)
@@ -99,8 +158,30 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		}
 		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	case "harvesting":
-		// reqBody.Instructions
-		//TODO: this
+		statusInstructions := reqBody.Instructions.(map[string]interface{})
+		nodeSymbolInInstructions, target_node := stringKeyInMap("node_symbol", statusInstructions)
+		if !nodeSymbolInInstructions {
+			// Fail case
+			log.Debug.Printf("'node_symbol' key required for 'harvesting' status")
+			responses.SendRes(w, responses.Bad_Request, nil, "'node_symbol' key required for 'harvesting' status")
+			return
+		}
+		// Get ResourceNodes for golem locale
+		locale_path := fmt.Sprintf("[\"%s\"]", targetGolem.LocationSymbol)
+		gotNode, res_node := getTargetResNodeFromLocale(w, r, locale_path, target_node.(string))
+		if !gotNode {
+			return // Fail state, handled by func, return
+		}
+		// Success, found specified res node in locale and got data on it from wdb
+
+		// Start harvesting
+		targetGolem.Status = "harvesting"
+		targetGolem.StatusDetail = res_node.Symbol
+		// Save to DB
+		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		if !savedToDb {
+			return // Fail state, handled by func, return
+		}
 		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	case "traveling":
 		// Check for all expected instructions
@@ -114,7 +195,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			return
 		}
 		// Get routes for golem locale
-		locale_path := fmt.Sprintf(".%s", targetGolem.LocationSymbol)
+		locale_path := fmt.Sprintf("[\"%s\"]", targetGolem.LocationSymbol)
 		gotRoute, cur_route := getTargetRouteFromLocale(w, r, locale_path, target_route.(string))
 		if !gotRoute {
 			return // Fail state, handled by func, return
@@ -126,7 +207,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		// May set route danger as well later, to have a result calculated after travel completed
 		targetGolem.TravelInfo.ArrivalTime = timecalc.AddSecondsToTimestamp(time.Now(), cur_route.TravelTime).Unix()
 		targetGolem.Status = "traveling"
-		targetGolem.LocationSymbol = destinationSymbol
+		targetGolem.StatusDetail = destinationSymbol
 		// Save to DB
 		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
 		if !savedToDb {
@@ -206,8 +287,23 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 		responses.SendRes(w, responses.User_Not_Found, nil, userNotFoundMsg)
 		return false, schema.User{}, rdb.Database{}, auth.ValidationPair{}
 	}
+
+	// Get wdb
+	wdbSuccess, wdb := GetWdbFromCtx(w, r)
+	if !wdbSuccess {
+		log.Debug.Printf("Could not get wdb from ctx")
+		return false, schema.User{}, rdb.Database{}, auth.ValidationPair{} // Fail state, could not get wdb, handled by func - simply return
+	}
+	// Success state, got wdb
+
 	// Success case
-	thisUser = gamelogic.CalculateUserUpdates(thisUser)
+	thisUser, calcErr := gamelogic.CalculateUserUpdates(thisUser, wdb)
+	if calcErr != nil {
+		// Fail state could not calculate user updates
+		resMsg := fmt.Sprintf("calcErr: %v", calcErr)
+		responses.SendRes(w, responses.Generic_Failure, nil, resMsg)
+		return false, thisUser, udb, userInfo
+	}
 	return true, thisUser, udb, userInfo
 }
 

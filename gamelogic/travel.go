@@ -22,6 +22,8 @@ func CalculateTravelArrived(userData schema.User) (schema.User) {
 				// Travel complete
 				log.Debug.Printf("%v before %v, setting to idle", arrTime, now)
 				userData.Golems[i].Status = "idle"
+				userData.Golems[i].LocationSymbol = userData.Golems[i].StatusDetail
+				userData.Golems[i].StatusDetail = ""
 			}
 		}
 	}

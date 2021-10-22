@@ -13,6 +13,7 @@ type Golem struct {
 	Archetype string `json:"archetype" binding:"required"`
 	LocationSymbol string `json:"location_symbol" binding:"required"` 
 	Status string `json:"status" binding:"required"`
+	StatusDetail string `json:"status-detail" binding:"required"`
 	Capacity float64 `json:"capacity" binding:"required"`
 	TravelInfo GolemTravelInfo `json:"travel_info" binding:"required"`
 }
@@ -85,6 +86,7 @@ func NewGolem(symbol string, archetype string, startingStatus string, capacity f
 		Archetype: archetype,
 		LocationSymbol: "A-G",
 		Status: startingStatus,
+		StatusDetail: "",
 		Capacity: capacity,
 		TravelInfo: GolemTravelInfo{
 			ArrivalTime: 0,

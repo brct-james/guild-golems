@@ -16,7 +16,8 @@ type User struct {
 	PublicUserInfo
 	ManaDetails
 	Golems []Golem `json:"golems" binding:"required"`
-	Inventory []LocationInventory `json:"inventory" binding:"required"`
+	LastHarvestTick int64 `json:"last-harvest-tick" binding:"required"`
+	Inventory map[string]LocationInventory `json:"inventory" binding:"required"`
 	KnownRituals []string `json:"known-rituals" binding:"required"`
 }
 
@@ -39,30 +40,32 @@ type ManaDetails struct {
 // Defines the schema for LocationInventories - lists of items owned by the player at a certain location
 type LocationInventory struct {
 	LocationSymbol string `json:"location-symbol" binding:"required"`
-	Contents []Resource `json:"contents" binding:"required"`
+	Contents map[string]int `json:"contents" binding:"required"`
 }
 
 func NewUser(token string, username string) User {
+	now := time.Now().Unix()
 	return User{
 		Token: token,
 		PublicUserInfo: PublicUserInfo{
 			Username: username,
 			Title: "",
 			Coins: 0,
-			UserSince: time.Now().Unix(),
+			UserSince: now,
 		},
 		ManaDetails: ManaDetails{
 			Mana: 3600.0,
 			ManaCap: 21600.0,
 			ManaRegen: 1.0,
-			LastManaTick: time.Now().Unix(),
+			LastManaTick: now,
 		},
 		Golems: make([]Golem, 0),
-		Inventory: make([]LocationInventory, 0),
+		Inventory: make(map[string]LocationInventory),
 		KnownRituals: []string{
 			"summon-invoker",
 			"summon-harvester",
 		},
+		LastHarvestTick: now,
 	}
 }
 

@@ -34,7 +34,7 @@ Go-based server for a fantasy-themed guild management game
 - `GET: /api/v0/my/golems` list all golems owned
 - `GET: /api/v0/my/golems/{archetype}` list all golems owned filtered by archetype
 - `GET: /api/v0/my/golem/{symbol}` get info on the specified golem
-- `PUT: /api/v0/my/golem/{symbol}` change golem task/status based on request body (see requests section below)
+- `PUT: /api/v0/my/golem/{symbol}` change golem task/status based on request body (see request bodies section below)
 - `GET: /api/v0/my/rituals` list all known rituals
 - `GET: /api/v0/my/rituals/{ritual}` show information on a particular ritual
 - `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
@@ -43,7 +43,7 @@ Go-based server for a fantasy-themed guild management game
 
 ---
 
-### Requests
+### Request Bodies
 
 - `PUT: /api/v0/my/golem/{symbol}` expects the following body:
 
@@ -55,9 +55,10 @@ Go-based server for a fantasy-themed guild management game
 ```
 
 - - Where new_status is the desired task from the set [`idle`, `harvesting`, `traveling`, `invoking`]
-- - Where instructions contain key:value pairs specific to each type of activity
+- - Where instructions contain key:value pairs specific to each type of activity, for example:
 - - - `idle` instructions | {}
 - - - `traveling` instructions | {"route": "A-G|A-SWF|WALK"}
+- - - `harvesting` instructions | {"node_symbol": "A-G|FOUNTAIN-WATER"}
 
 ---
 
@@ -80,11 +81,6 @@ Versioning Convention: `major.minor.hotfix`
 
 ### In-Progress
 
-**[v0.3]** Harvesters v0
-
-- Harvesters collecting free resources from nodes
-- - v0: simply collecting X resource at location taking Y time
-
 **[v0.3]** Game Variables Refactor
 
 - Game variables should be defined in gamelogic, for example, golem capacity `gamelogic.InvokerCapacity`
@@ -92,12 +88,13 @@ Versioning Convention: `major.minor.hotfix`
 
 ### Planned: v0.0.5 MVP
 
-**[v0.4]** Inventories v0
+**[v0.4]** Inventories & Couriers v0
 
+- Inventories are per-location, with golems having their own inventories for moving goods between locations
 - `.../my/inventory` inventory report showing what resources are at each location
 - `.../my/couriers` transporting materials between two locations
 - - v0: simply moving resources between locations, based on a set speed and capacity
-- - how will inventories work? one thought is giving each golem an inventory, another is having a localized inventory for each area per-player. most likely want to harvest into a local inventory, moved between locales by loading and unloading from golem inventories
+- - load and unload commands in request body
 
 **[v0.5]** Merchants v0
 
@@ -213,6 +210,14 @@ Versioning Convention: `major.minor.hotfix`
 - - Also would need a flushUserUpdates or something like that for things like `/my/account` which need everything up to date
 - Productionalize parsing json body: [link](https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body)
 
+- **from ST discord:**
+- users can create an account (email) and then register as an agent (with a call sign and symbol)
+- the agent schema is what persists credits, etc so a player can start new games as needed without needing to re-register
+- the account will be their identity which captures email, discord handle and some patreon ID or whatever we can do there
+- Any use for this type of user/agent structure in this game? Perhaps not, maybe consider for venusian-industries?
+- - could specify permissions at the agent level for 3rd party apps via oauth
+- - - users register, once logged in can create agents (generating a token for each, saved to the user data), can authorize oauth via agent menu
+
 ---
 
 ## Build & Run
@@ -238,6 +243,9 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 ### v0.3
 
 - Refactored ChangeGolemTask into smaller functions
+- Harvesters v0
+- - Harvesters collecting free resources from nodes
+- - - v0: simply collecting X resource at location taking Y time
 
 ---
 

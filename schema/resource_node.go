@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/rdb"
@@ -70,7 +69,7 @@ func ResourceNode_get_json_from_db(wdb rdb.Database, path string) ([]byte, error
 
 // Get the resourcenode specified by path from db
 func ResourceNode_get_from_db(wdb rdb.Database, path string) (ResourceNode, error) {
-	if strings.EqualFold(".", path) {
+	if path == "." || path == "" {
 		log.Error.Printf("Calling resourcenode_get_from_db with . path, should use resourcenode_get_all_from_db instead!")
 	}
 	log.Debug.Printf("Getting resourcenode from db")
