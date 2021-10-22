@@ -81,13 +81,6 @@ Versioning Convention: `major.minor.hotfix`
 
 ### In-Progress
 
-**[v0.3]** Game Variables Refactor
-
-- Game variables should be defined in gamelogic, for example, golem capacity `gamelogic.InvokerCapacity`
-- - Refactor and ensure this is occurring throughout the code
-
-### Planned: v0.0.5 MVP
-
 **[v0.4]** Inventories & Couriers v0
 
 - Inventories are per-location, with golems having their own inventories for moving goods between locations
@@ -96,10 +89,29 @@ Versioning Convention: `major.minor.hotfix`
 - - v0: simply moving resources between locations, based on a set speed and capacity
 - - load and unload commands in request body
 
+### Planned: v0.5 MVP
+
 **[v0.5]** Merchants v0
 
 - `.../my/merchants` buying/selling
-- - v0: simple buy and sell tasks at set market prices
+- simple buy/sell orders
+- - request body contains item, amount, target sell price/target buy price or an override to force order execution at market rate regardless of price
+- - if price does not meet criteria, action will not go through
+- markets for each major locale
+- - server market order queue
+- - - orders enter the queue and are processed sequentially
+- - - orders are always handled one of two ways:
+- - - - executed at current market price in 100 unit increments
+- - - - fail to execute because market price does not meet order criteria (for example, if price changes to be lower than the player anticipated)
+- market rates semi-dynamic & affected by other players
+- - market inventory of locally consumed resources
+- - set consumption rate for each locale
+- - locale markets only buy resources relevant to their needs
+- - price depends on various factors per good per location
+- - - price = math.Ceiling(math.Min(min_price, max_price / ((1+(x/max_goods-x))^sensitivity)))
+- - - - where sensitivity is > 0: sensitivity=1 is linear, <1 is stable near the center, >1 is stable near the edges.
+- - - - requires a check that x is not greater than max_goods, if so simply return the min_price
+- - cannot buy if market inventory is empty
 
 ---
 
@@ -110,13 +122,20 @@ Versioning Convention: `major.minor.hotfix`
 - cast spells
 - - v0: spell to move a golem instantly between locations, can be used with a courier for instant moving of resources as well, mana cost by weight/volume
 - `rituals` should be loaded from json into memory, User.KnownRituals should instead store the symbols and the ListRituals handler should lookup the rituals from the json map
+- spell to increase base mana regen
+- nerf golem mana regen bonus to like 0.1 ea or something instead of 1
+- can use items from local inventory (for now just hardcode A-G) as component
 
-**[v0.7]** Various Refactors & Tests
+**[v0.7]** Balance Pass & Various Refactors
 
+- Initial balance pass:
+- - Ritual mana cost
+- - Mana regen & invoker bonus
+- - Resource gain rates
+- -
 - Refactor the bloat in schema & handlers (helper funcs) into more appropriate locations
 - Convert all routes to kebab-case, all json and private vars/funcs to snake_case
 - Refactor large funcs
-- Write tests
 
 **[v0.7]** Various Endpoints & Merchants FOW
 
@@ -175,10 +194,28 @@ Versioning Convention: `major.minor.hotfix`
 - Add node quantities to resource nodes, along with replenishment
 - - Figure out a good way to balance this with race conditions when multiple users harvest at once, and replenishment having an unknown number of people harvesting at once
 
+**[v1.x]** Merchants v1
+
+- Advanced buy/sell order-based economy
+- Dynamic local consumption & AI suppliers
+
+**[v1.x]** Travel v1
+
+- Travel becomes dangerous.
+- - Ways to mitigate?
+- Certain routes have costs.
+- - Obviously the more expensive the less dangerous and/or the faster the route
+- Balance pass for travel-related rituals & merchant prices
+
+**[v1.x]** Tests
+
+- Write integration tests for all endpoints
+
 ---
 
 ### Planned: Unscheduled
 
+- gamevars should be its own config yaml/json file rather than code
 - semi-secure routes which will display more information if authorized (for fog of war on location routes, for example) - or is this being handled by using a separate route for markets and things?
 - Define gamevars and other settings like those in main.go in config files rather than code
 - Rituals v1
@@ -240,12 +277,19 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 
 ## Changelog
 
+### v0.4
+
+- Nothing yet
+
 ### v0.3
 
 - Refactored ChangeGolemTask into smaller functions
 - Harvesters v0
 - - Harvesters collecting free resources from nodes
 - - - v0: simply collecting X resource at location taking Y time
+- Game Variables Refactor
+- - Game variables should be defined in gamevars, for example, golem capacity `gamevars.InvokerCapacity`
+- - - Refactor and ensure this is occurring throughout the code
 
 ---
 

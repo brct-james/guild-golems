@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/brct-james/guild-golems/gamevars"
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/rdb"
 )
@@ -50,21 +51,18 @@ func NewUser(token string, username string) User {
 		PublicUserInfo: PublicUserInfo{
 			Username: username,
 			Title: "",
-			Coins: 0,
+			Coins: gamevars.Starting_Coins,
 			UserSince: now,
 		},
 		ManaDetails: ManaDetails{
-			Mana: 3600.0,
-			ManaCap: 21600.0,
-			ManaRegen: 1.0,
+			Mana: gamevars.Starting_Mana,
+			ManaCap: gamevars.Starting_Mana_Cap,
+			ManaRegen: gamevars.Starting_Mana_Regen,
 			LastManaTick: now,
 		},
 		Golems: make([]Golem, 0),
 		Inventory: make(map[string]LocationInventory),
-		KnownRituals: []string{
-			"summon-invoker",
-			"summon-harvester",
-		},
+		KnownRituals: gamevars.Starting_Rituals,
 		LastHarvestTick: now,
 	}
 }

@@ -78,13 +78,13 @@ type GolemStatusUpdateBody struct {
 // 	LastEnergyTick int64 `json:"last-energy-tick" binding:"required"`
 // }
 
-func NewGolem(symbol string, archetype string, startingStatus string, capacity float64) Golem {
+func NewGolem(symbol string, archetype string, location string, startingStatus string, capacity float64) Golem {
 	return Golem{
 		HasSymbol: HasSymbol{
 			Symbol: symbol,
 		},
 		Archetype: archetype,
-		LocationSymbol: "A-G",
+		LocationSymbol: location,
 		Status: startingStatus,
 		StatusDetail: "",
 		Capacity: capacity,

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/brct-james/guild-golems/gamevars"
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
@@ -31,7 +32,7 @@ func CalculateManaRegen(userData schema.User) (schema.User) {
 	log.Debug.Println(log.Cyan("-- Begin CalculateManaRegen --"))
 	secondsSinceTick := time.Since(time.Unix(userData.LastManaTick, 0)).Seconds()
 	numInvokers := len(schema.FilterGolemListByStatus(schema.FilterGolemListByArchetype(userData.Golems, "invoker"), "invoking"))
-	userData.Mana = math.Min(userData.ManaCap, userData.Mana + (secondsSinceTick * (userData.ManaRegen + (float64(numInvokers)/2))))
+	userData.Mana = math.Min(userData.ManaCap, userData.Mana + (secondsSinceTick * (userData.ManaRegen + (float64(numInvokers)*gamevars.Invoker_Potency))))
 	userData.LastManaTick = time.Now().Unix()
 	log.Debug.Println(log.Cyan("-- End CalculateManaRegen --"))
 	return userData

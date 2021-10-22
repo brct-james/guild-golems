@@ -12,6 +12,7 @@ import (
 
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/gamelogic"
+	"github.com/brct-james/guild-golems/gamevars"
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/metrics"
 	"github.com/brct-james/guild-golems/rdb"
@@ -320,7 +321,7 @@ func doesUserKnowRitual(userData schema.User, ritualKey string) (bool) {
 }
 
 // Create new golem for user in database, if able, of particular archetype
-func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database, userData schema.User, archetype string, ritualName string, startingStatus string, capacity float64) (bool) {
+func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database, userData schema.User, archetype string, locationSymbol string, ritualName string, startingStatus string, capacity float64) (bool) {
 	knowsRitual := doesUserKnowRitual(userData, ritualName)
 	if !knowsRitual {
 		responses.SendRes(w, responses.Ritual_Not_Known, nil, "")
@@ -346,7 +347,7 @@ func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database
 	var newGolemId int = len(schema.FilterGolemListByArchetype(userData.Golems, archetype))
 	
 	newGolemSymbol := fmt.Sprintf("%s-%d", schema.GolemArchetypes[archetype].Abbreviation, newGolemId)
-	newGolem := schema.NewGolem(newGolemSymbol, archetype, startingStatus, capacity)
+	newGolem := schema.NewGolem(newGolemSymbol, archetype, locationSymbol, startingStatus, capacity)
 	userData.Golems = append(userData.Golems, newGolem)
 	saveUserErr := SaveUserToDB(udb, userData)
 	if saveUserErr != nil {
@@ -569,7 +570,7 @@ func NewInvoker(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success := createNewGolemInDB(w, r, udb, userData, "invoker", "summon-invoker", "invoking", gamelogic.Capacity_Invoker)
+	success := createNewGolemInDB(w, r, udb, userData, "invoker", gamevars.Starting_Location, "summon-invoker", "invoking", gamevars.Capacity_Invoker)
 	if !success {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}
@@ -583,7 +584,7 @@ func NewHarvester(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	success := createNewGolemInDB(w, r, udb, userData, "harvester", "summon-harvester", "idle", gamelogic.Capacity_Harvester)
+	success := createNewGolemInDB(w, r, udb, userData, "harvester", gamevars.Starting_Location, "summon-harvester", "idle", gamevars.Capacity_Harvester)
 	if !success {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}
