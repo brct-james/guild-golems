@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/gamelogic"
@@ -18,7 +17,6 @@ import (
 	"github.com/brct-james/guild-golems/rdb"
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
-	"github.com/brct-james/guild-golems/timecalc"
 	"github.com/gorilla/mux"
 )
 
@@ -153,6 +151,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 	switch reqBody.NewStatus {
 	case "idle":
 		targetGolem.Status = "idle"
+		targetGolem.StatusDetail = ""
 		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
 		if !savedToDb {
 			return // Fail state, handled by func, return
@@ -206,7 +205,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		destinationSymbol := strings.Split(cur_route.Symbol, "|")[1]
 		// Start travel
 		// May set route danger as well later, to have a result calculated after travel completed
-		targetGolem.TravelInfo.ArrivalTime = timecalc.AddSecondsToTimestamp(time.Now(), cur_route.TravelTime).Unix()
+		targetGolem.TravelInfo.ArrivalTime = gamelogic.CalcualteArrivalTime(cur_route.TravelTime, targetGolem.Archetype).Unix()
 		targetGolem.Status = "traveling"
 		targetGolem.StatusDetail = destinationSymbol
 		// Save to DB
@@ -215,8 +214,191 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			return // Fail state, handled by func, return
 		}
 		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+	case "packing":
+		statusInstructions := reqBody.Instructions.(map[string]interface{})
+		manifestInInstructions, tempManifest := stringKeyInMap("manifest", statusInstructions)
+		if !manifestInInstructions {
+			// Fail case
+			log.Debug.Printf("'manifest' key required for 'packing/storing' status")
+			responses.SendRes(w, responses.Bad_Request, nil, "'manifest' key required for 'packing/storing' status")
+			return
+		}
+		if len(tempManifest.(map[string]interface{})) < 1 {
+			// Fail case
+			responses.SendRes(w, responses.Blank_Manifest_Disallowed, nil, "")
+			return
+		}
+		// Convert manifest to map[string]int from map[string]interface{}
+		c, ok := tempManifest.(map[string]interface{})
+		if !ok {
+			// cant assert, handle error
+			log.Error.Printf("cant assert tempManifest.(map[string]interface{}")
+			responses.SendRes(w, responses.Generic_Failure, nil, "Cant assert tempManifest.(map[string]interface{}")
+			return
+		}
+		manifest := make(map[string]int)
+		for k,v := range c {
+			manifest[k] = int(v.(float64))
+		}
+
+		// Get wdb
+		wdbSuccess, wdb := GetWdbFromCtx(w, r)
+		if !wdbSuccess {
+			log.Debug.Printf("Could not get wdb from ctx")
+			return // Fail state, could not get wdb, handled by func - simply return
+		}
+		// Success state, got wdb
+
+		// Get resources in locale inventory at golem location
+		
+		gotInv, locInv := schema.GetInventoryByKey(targetGolem.LocationSymbol, userData.Inventories)
+		if !gotInv {
+			// Fail case - no items in inventory at location
+			responses.SendRes(w, responses.No_Packable_Items, nil, "")
+			return
+		}
+
+		// Validate and handle packing manifest
+		for symbol, quantity := range manifest {
+			// Check inv for each item in manifest
+			contains, amountContained := schema.DoesInventoryContain(locInv, symbol, quantity)
+			if !contains {
+				// Fail case - invalid manifest, specified item not contained in sufficient quantity at location
+				resMsg := fmt.Sprintf("Item: %s, Amount contained: %d", symbol, amountContained)
+				responses.SendRes(w, responses.Invalid_Manifest, nil, resMsg)
+				return
+			}
+			// Success case - update inventories with new contents
+			userData.Inventories[targetGolem.LocationSymbol].Contents[symbol] = amountContained - quantity
+			// delete symbol in contents if empty, then if contents empty delete entry in Inventories
+			if amountContained - quantity == 0 {
+				if len(userData.Inventories[targetGolem.LocationSymbol].Contents) == 1 {
+					delete(userData.Inventories, targetGolem.LocationSymbol)
+				}
+				delete(userData.Inventories[targetGolem.LocationSymbol].Contents, symbol)
+			} 
+			// Check for inventory with specified symbol, if not exist already then make it exist
+			if _, ok := userData.Inventories[targetGolem.Symbol]; !ok {
+				userData.Inventories[targetGolem.Symbol] = schema.Inventory{LocationSymbol:targetGolem.Symbol,Contents:make(map[string]int)}
+			}
+			userData.Inventories[targetGolem.Symbol].Contents[symbol] = userData.Inventories[targetGolem.Symbol].Contents[symbol] + quantity
+		}
+
+		// Validate golem inventory can hold the amount of items specified in manifest before saving to db
+		newCapacity := 0.0
+		for symbol, quantity := range userData.Inventories[targetGolem.Symbol].Contents {
+			res_path := fmt.Sprintf("[\"%s\"]", symbol)
+			res, getResErr := schema.Resource_get_from_db(wdb, res_path)
+			if getResErr != nil {
+				// fail state, could not get res from db'
+				resMsg := fmt.Sprintf("res_path: %s", res_path)
+				responses.SendRes(w, responses.WDB_Get_Failure, nil, resMsg)
+				return
+			}
+			// success state
+			newCapacity += res.CapacityPerUnit * float64(quantity)
+		}
+		if newCapacity > targetGolem.Capacity {
+			// fail state, newCapacity exceeds golem max
+			resMsg := fmt.Sprintf("newCapacity %f exceeds golem max %f", newCapacity, targetGolem.Capacity)
+			responses.SendRes(w, responses.Manifest_Overflow, nil, resMsg)
+			return
+		}
+		
+		// success state - save to db
+
+		// TODO: make packing and storing take time (so these statuses don't finish instantly)
+		targetGolem.Status = "idle"
+		targetGolem.StatusDetail = ""
+
+		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		if !savedToDb {
+			return // Fail state, handled by func, return
+		}
+
+		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+	case "storing":
+		statusInstructions := reqBody.Instructions.(map[string]interface{})
+		manifestInInstructions, tempManifest := stringKeyInMap("manifest", statusInstructions)
+		if !manifestInInstructions {
+			// Fail case
+			log.Debug.Printf("'manifest' key required for 'packing/storing' status")
+			responses.SendRes(w, responses.Bad_Request, nil, "'manifest' key required for 'packing/storing' status")
+			return
+		}
+		if len(tempManifest.(map[string]interface{})) < 1 {
+			// Fail case
+			responses.SendRes(w, responses.Blank_Manifest_Disallowed, nil, "")
+			return
+		}
+		// Convert manifest to map[string]int from map[string]interface{}
+		c, ok := tempManifest.(map[string]interface{})
+		if !ok {
+			// cant assert, handle error
+			log.Error.Printf("cant assert tempManifest.(map[string]interface{}")
+			responses.SendRes(w, responses.Generic_Failure, nil, "Cant assert tempManifest.(map[string]interface{}")
+			return
+		}
+		manifest := make(map[string]int)
+		for k,v := range c {
+			manifest[k] = int(v.(float64))
+		}
+		
+		// Get resources in golem inventory
+		gotInv, golInv := schema.GetInventoryByKey(targetGolem.Symbol, userData.Inventories)
+		if !gotInv {
+			// Fail case - no items in inventory
+			responses.SendRes(w, responses.No_Storable_Items, nil, "")
+			return
+		}
+
+		// Validate and handle storing manifest
+		for symbol, quantity := range manifest {
+			// Check inv for each item in manifest
+			contains, amountContained := schema.DoesInventoryContain(golInv, symbol, quantity)
+			if !contains {
+				// Fail case - invalid manifest, specified item not contained in sufficient quantity
+				resMsg := fmt.Sprintf("Item: %s, Amount contained: %d", symbol, amountContained)
+				responses.SendRes(w, responses.Invalid_Manifest, nil, resMsg)
+				return
+			}
+			// Success case - update inventories with new contents
+			userData.Inventories[targetGolem.Symbol].Contents[symbol] = amountContained - quantity
+			// delete symbol in contents if empty, then if contents empty delete entry in Inventories
+			if amountContained - quantity == 0 {
+				if len(userData.Inventories[targetGolem.Symbol].Contents) == 1 {
+					delete(userData.Inventories, targetGolem.Symbol)
+				}
+				delete(userData.Inventories[targetGolem.Symbol].Contents, symbol)
+			} 
+			// Check for inventory with specified symbol, if not exist already then make it exist
+			if _, ok := userData.Inventories[targetGolem.LocationSymbol]; !ok {
+				userData.Inventories[targetGolem.LocationSymbol] = schema.Inventory{LocationSymbol:targetGolem.LocationSymbol,Contents:make(map[string]int)}
+			}
+			userData.Inventories[targetGolem.LocationSymbol].Contents[symbol] = userData.Inventories[targetGolem.LocationSymbol].Contents[symbol] + quantity
+		}
+		
+		// success state - save to db
+
+		// TODO: make packing and storing take time (so these statuses don't finish instantly)
+		targetGolem.Status = "idle"
+		targetGolem.StatusDetail = ""
+
+		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		if !savedToDb {
+			return // Fail state, handled by func, return
+		}
+
+		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	case "invoking":
-		//TODO: this
+		// Start invoking
+		targetGolem.Status = "invoking"
+		targetGolem.StatusDetail = ""
+		// Save to DB
+		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		if !savedToDb {
+			return // Fail state, handled by func, return
+		}
 		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
 	default:
 		// Error state, newStatus passed validation but not caught by switch statement
@@ -447,7 +629,8 @@ func checkStatusChangeAllowedAndGetReqBody(w http.ResponseWriter, r *http.Reques
 	}
 	if !isAllowed {
 		// Fail state, new status not allowed
-		responses.SendRes(w, responses.New_Status_Not_Allowed, nil, "")
+		resMsg := fmt.Sprintf("received status: %s allowed statuses for archetype %s: %v", reqBody.NewStatus, archetype, schema.GolemArchetypes[archetype].AllowedStatuses)
+		responses.SendRes(w, responses.New_Status_Not_Allowed, nil, resMsg)
 		return false, schema.GolemStatusUpdateBody{}
 	}
 	return true, reqBody
@@ -469,6 +652,22 @@ func AccountInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Printf("Sending response for AccountInfo:\n%v", getUserJsonString)
 	responses.SendRes(w, responses.Generic_Success, userData, "")
 	log.Debug.Println(log.Cyan("-- End accountInfo --"))
+}
+
+// Handler function for the secure route: GET /api/v0/my/inventories
+func InventoryInfo(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- InventoryInfo --"))
+	OK, userData, _, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	getUserJsonString, getUserJsonStringErr := responses.JSON(userData)
+	if getUserJsonStringErr != nil {
+		log.Error.Printf("Error in InventoryInfo, could not format thisUser as JSON. userData: %v, error: %v", userData, getUserJsonStringErr)
+	}
+	log.Debug.Printf("Sending response for InventoryInfo:\n%v", getUserJsonString)
+	responses.SendRes(w, responses.Generic_Success, userData.Inventories, "")
+	log.Debug.Println(log.Cyan("-- End InventoryInfo --"))
 }
 
 // Handler function for the secure route: GET /api/v0/my/golems
@@ -589,6 +788,20 @@ func NewHarvester(w http.ResponseWriter, r *http.Request) {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}
 	log.Debug.Println(log.Cyan("-- End NewHarvester --"))
+}
+
+// Handler function for the secure route: POST /api/v0/my/rituals/summon-courier
+func NewCourier(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- NewCourier --"))
+	OK, userData, udb, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	success := createNewGolemInDB(w, r, udb, userData, "courier", gamevars.Starting_Location, "summon-courier", "idle", gamevars.Capacity_Courier)
+	if !success {
+		return // Failure states handled by createNewGolemInDB, simply return
+	}
+	log.Debug.Println(log.Cyan("-- End NewCourier --"))
 }
 
 // Handler function for the secure route: PUT /api/v0/my/invokers/{symbol}

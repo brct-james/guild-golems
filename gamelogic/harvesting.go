@@ -51,17 +51,17 @@ func CalculateResourcesHarvested(userData schema.User, wdb rdb.Database) (schema
 				}
 			}
 			// Create locationInventory for this symbol if not already exists
-			locationInventory, ok := userData.Inventory[golem.LocationSymbol]
+			locationInventory, ok := userData.Inventories[golem.LocationSymbol]
 			if !ok {
-				userData.Inventory[golem.LocationSymbol] = schema.LocationInventory{
-					LocationSymbol: golem.LocationSymbol,
+				userData.Inventories[golem.LocationSymbol] = schema.Inventory{
+					LocationSymbol: golem.Symbol,
 					Contents: make(map[string]int),
 				}
-				locationInventory = userData.Inventory[golem.LocationSymbol]
+				locationInventory = userData.Inventories[golem.LocationSymbol]
 			}
 			// Add drop amount to inventory
 			// TODO: Check for max capacity by looking up InventoryResource definition in db
-			userData.Inventory[golem.LocationSymbol].Contents[drop.ResourceSymbol] = locationInventory.Contents[drop.ResourceSymbol] + (drop.HarvestAmount * numHarvestsSinceTick)
+			userData.Inventories[golem.LocationSymbol].Contents[drop.ResourceSymbol] = locationInventory.Contents[drop.ResourceSymbol] + (drop.HarvestAmount * numHarvestsSinceTick)
 		}
 		userData.LastHarvestTick = time.Now().Unix()
 	}

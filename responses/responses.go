@@ -50,6 +50,11 @@ const (
 	Leaderboard_Not_Found ResponseCode = 24
 	No_Resource_Nodes_At_Location ResponseCode = 25
 	Target_Resource_Node_Unavailable ResponseCode = 26
+	No_Packable_Items ResponseCode = 27
+	Invalid_Manifest ResponseCode = 28
+	Manifest_Overflow ResponseCode = 29
+	No_Storable_Items ResponseCode = 30
+	Blank_Manifest_Disallowed ResponseCode = 31
 )
 
 // Defines Response structure for output
@@ -124,6 +129,16 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[No_Resource_Nodes_At_Location] No resources nodes found at the location of the specified golem"
 	case 26:
 		message = "[Target_Resource_Node_Unavailable] The specified resource node is not available at the current location"
+	case 27:
+		message = "[No_Packable_Items] No packable items in location inventory at specified golem's locale"
+	case 28:
+		message = "[Invalid_Manifest] Invalid manifest, specified item not contained in sufficient quantity in specified inventory"
+	case 29:
+		message = "[Manifest_Overflow] Manifest is valid but requests more items than the golem can handle"
+	case 30:
+		message = "[No_Storable_Items] No storable items in the specified golem's inventory"
+	case 31:
+		message = "[Blank_Manifest_Disallowed] Manifest cannot be blank, please includes items to load"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

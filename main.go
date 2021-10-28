@@ -170,6 +170,7 @@ func handle_requests() {
 	secure := mxr.PathPrefix("/api/v0/my").Subrouter()
 	secure.Use(auth.GenerateTokenValidationMiddlewareFunc(userDatabase))
 	secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
+	secure.HandleFunc("/inventories", handlers.InventoryInfo).Methods("GET")
 	secure.HandleFunc("/golems", handlers.GetGolems).Methods("GET")
 	secure.HandleFunc("/golems/{archetype}", handlers.GetGolemsByArchetype).Methods("GET")
 	secure.HandleFunc("/golem/{symbol}", handlers.GolemInfo).Methods("GET")
@@ -178,6 +179,7 @@ func handle_requests() {
 	secure.HandleFunc("/rituals/{ritual}", handlers.GetRitualInfo).Methods("GET")
 	secure.HandleFunc("/rituals/summon-invoker", handlers.NewInvoker).Methods("POST")
 	secure.HandleFunc("/rituals/summon-harvester", handlers.NewHarvester).Methods("POST")
+	secure.HandleFunc("/rituals/summon-courier", handlers.NewCourier).Methods("POST")
 
 	// Start listening
 	log.Info.Printf("Listening on %s", ListenPort)

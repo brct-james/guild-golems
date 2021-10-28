@@ -18,7 +18,7 @@ type User struct {
 	ManaDetails
 	Golems []Golem `json:"golems" binding:"required"`
 	LastHarvestTick int64 `json:"last-harvest-tick" binding:"required"`
-	Inventory map[string]LocationInventory `json:"inventory" binding:"required"`
+	Inventories map[string]Inventory `json:"inventories" binding:"required"`
 	KnownRituals []string `json:"known-rituals" binding:"required"`
 }
 
@@ -38,10 +38,33 @@ type ManaDetails struct {
 	LastManaTick int64 `json:"last-mana-tick" binding:"required"`
 }
 
-// Defines the schema for LocationInventories - lists of items owned by the player at a certain location
-type LocationInventory struct {
+// Defines the schema for Inventories - lists of items owned by the player at a certain location (locale or on a certain golem)
+type Inventory struct {
 	LocationSymbol string `json:"location-symbol" binding:"required"`
 	Contents map[string]int `json:"contents" binding:"required"`
+}
+
+func GetInventoryByKey(key string, dict map[string]Inventory) (bool, Inventory) {
+	if val, ok := dict[key]; ok {
+		// yes, key in map
+		return true, val
+	}
+	// no, key not in map
+	return false, Inventory{}
+}
+
+func DoesInventoryContain(inv Inventory, symbol string, amount int) (bool, int) {
+	if val, ok := inv.Contents[symbol]; ok {
+		// yes, key in map
+		if val >= amount {
+			// yes, contains more than or equal to amount
+			return true, val
+		}
+		// no, contains less than amount
+		return false, val
+	}
+	// no, key not in map
+	return false, 0
 }
 
 func NewUser(token string, username string) User {
@@ -61,7 +84,7 @@ func NewUser(token string, username string) User {
 			LastManaTick: now,
 		},
 		Golems: make([]Golem, 0),
-		Inventory: make(map[string]LocationInventory),
+		Inventories: make(map[string]Inventory),
 		KnownRituals: gamevars.Starting_Rituals,
 		LastHarvestTick: now,
 	}

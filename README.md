@@ -15,6 +15,7 @@ Go-based server for a fantasy-themed guild management game
 - - `invokers` amplify your mana regen
 - - Mana regen is calculated every time `secureGetUser` is called
 - - `harvesters` gather resources from nodes in the world
+- - `couriers` transport resources between locations, and have travel times multiplied by 0.75
 - Have golems travel between locations
 - Leaderboards based on various criteria
 - - Note: At present leaderboards are not being generated nor cached, so no rankings are returned
@@ -31,6 +32,7 @@ Go-based server for a fantasy-themed guild management game
 - `GET: /api/v0/users/{username}` returns the public user data
 - `POST: /api/v0/users/{username}/claim` attempts to claim the specified username, returns the user data after creation, including token which users must save to access private routes
 - `GET: /api/v0/my/account` returns the private user data (includes token)
+- `GET: /api/v0/my/inventories` returns the inventories of each location and golem that currently contain resources
 - `GET: /api/v0/my/golems` list all golems owned
 - `GET: /api/v0/my/golems/{archetype}` list all golems owned filtered by archetype
 - `GET: /api/v0/my/golem/{symbol}` get info on the specified golem
@@ -40,6 +42,7 @@ Go-based server for a fantasy-themed guild management game
 - `POST: /api/v0/my/rituals/{ritual}` attempt to do the given ritual
 - - `summon-invoker` Spend mana to summon a new invoker, who can be used to help generate even more mana.
 - - `summon-harvester` Spend mana to summon a new harvester, who can be used to gather resources from nodes in the world.
+- - `summon-courier` Spend mana to summon a new courier, who can be used to transport resources between locales.
 
 ---
 
@@ -54,11 +57,13 @@ Go-based server for a fantasy-themed guild management game
 }
 ```
 
-- - Where new_status is the desired task from the set [`idle`, `harvesting`, `traveling`, `invoking`]
+- - Where new_status is the desired task from the set [`idle`, `harvesting`, `traveling`, `invoking`, `packing`, `storing`]
 - - Where instructions contain key:value pairs specific to each type of activity, for example:
-- - - `idle` instructions | {}
-- - - `traveling` instructions | {"route": "A-G|A-SWF|WALK"}
-- - - `harvesting` instructions | {"node_symbol": "A-G|FOUNTAIN-WATER"}
+- - - `idle` no instructions | {}
+- - - `traveling` instructions specify what route to travel | {"route": "A-G|A-SWF|WALK"}
+- - - `harvesting` instructions specify what node to harvest | {"node_symbol": "A-G|FOUNTAIN-WATER"}
+- - - `packing` instructions specify what to pack into the golem inventory from the local inventory | {"manifest": {"LOGS":1,"HERBS":10}}
+- - - `storing` instructions specify what to store into the local inventory from the golem inventory | {"manifest": {"HERBS":5}}
 
 ---
 
@@ -81,19 +86,20 @@ Versioning Convention: `major.minor.hotfix`
 
 ### In-Progress
 
-**[v0.4]** Inventories & Couriers v0
+**[v0.4]** Travel Info -> Itineraries Refactor
 
-- Inventories are per-location, with golems having their own inventories for moving goods between locations
-- `.../my/inventory` inventory report showing what resources are at each location
-- `.../my/couriers` transporting materials between two locations
-- - v0: simply moving resources between locations, based on a set speed and capacity
-- - load and unload commands in request body
+- itineraries stored like inventories, as a map, rather than accessing the golem for setting/getting travel info, simply access the itinerary
+- - like inventories, calls to get all golem info need to lookup the relevant itinerary
+
+**[v0.4]** Load resources and other static data to memory rather than the db
 
 ### Planned: v0.5 MVP
 
 **[v0.5]** Merchants v0
 
 - `.../my/merchants` buying/selling
+- have to be holding the items to sell them, and are limited in buy price by capacity
+- have large capacities, but not as large as couriers
 - simple buy/sell orders
 - - request body contains item, amount, target sell price/target buy price or an override to force order execution at market rate regardless of price
 - - if price does not meet criteria, action will not go through
@@ -132,8 +138,9 @@ Versioning Convention: `major.minor.hotfix`
 - - Ritual mana cost
 - - Mana regen & invoker bonus
 - - Resource gain rates
-- -
+- - Market prices
 - Refactor the bloat in schema & handlers (helper funcs) into more appropriate locations
+- - golem search funcs could be an interface method, perhaps schema funcs should all be?
 - Convert all routes to kebab-case, all json and private vars/funcs to snake_case
 - Refactor large funcs
 
@@ -279,7 +286,15 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 
 ### v0.4
 
-- Nothing yet
+- Inventories & Couriers v0
+
+- - Inventories are per-location, with golems having their own inventories for moving goods between locations
+- - - Easiest way is probably storing golem inventories in inventory map, using golem symbol as key
+- - `.../my/inventory` inventory report showing what resources are at each location
+- - `.../my/couriers` transporting materials between two locations
+- - - v0: simply moving resources between locations, based on a set speed and capacity
+- - - summoning and getting info
+- - - `packing` & `storing` instructions specify what to load/unload to/from the golem's inventory from/to the locale's inventory | {"manifest": {"LOGS": 10,"HERBS": 15}}
 
 ### v0.3
 

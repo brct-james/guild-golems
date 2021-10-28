@@ -36,6 +36,8 @@ var GolemStatuses = map[string]GolemStatus {
 	"harvesting": {Name:"Harvesting", IsBlocking: false},
 	"traveling": {Name:"Traveling", IsBlocking: true},
 	"invoking": {Name:"Invoking", IsBlocking: true},
+	"packing": {Name:"Packing", IsBlocking: true},
+	"storing": {Name:"Storing", IsBlocking: true},
 }
 
 // golem archetypes and abbreviations map
@@ -52,7 +54,7 @@ var GolemArchetypes = map[string]GolemArchetype {
 		AllowedStatuses: []string{"idle", "traveling", "harvesting"},
 	},
 	"courier": {Name:"Courier", Abbreviation:"COR",
-		AllowedStatuses: []string{"idle", "traveling"},
+		AllowedStatuses: []string{"idle", "traveling", "packing", "storing"},
 	},
 	"artisan": {Name:"Artisan", Abbreviation:"ART",
 		AllowedStatuses: []string{"idle", "traveling"},

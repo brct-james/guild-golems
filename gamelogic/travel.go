@@ -7,6 +7,7 @@ import (
 
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/schema"
+	"github.com/brct-james/guild-golems/timecalc"
 )
 
 // Update whether golem arrived at destination, return the updated userData
@@ -29,4 +30,13 @@ func CalculateTravelArrived(userData schema.User) (schema.User) {
 	}
 	log.Debug.Println(log.Cyan("-- End CalculateTravelArrived --"))
 	return userData
+}
+
+func CalcualteArrivalTime(travelTime int, archetype string) (time.Time) {
+	// Buff travel time for couriers
+	if archetype == "courier" {
+		travelTime = int(float64(travelTime) * 0.75)
+	}
+	return timecalc.AddSecondsToTimestamp(time.Now(), travelTime)
+
 }
