@@ -156,7 +156,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
 	case "harvesting":
 		statusInstructions := reqBody.Instructions.(map[string]interface{})
 		nodeSymbolInInstructions, target_node := stringKeyInMap("node_symbol", statusInstructions)
@@ -182,7 +182,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
 	case "traveling":
 		// Check for all expected instructions
 		// Convert Instructions to map with string keys
@@ -213,7 +213,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
 	case "packing":
 		statusInstructions := reqBody.Instructions.(map[string]interface{})
 		manifestInInstructions, tempManifest := stringKeyInMap("manifest", statusInstructions)
@@ -316,7 +316,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			return // Fail state, handled by func, return
 		}
 
-		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
 	case "storing":
 		statusInstructions := reqBody.Instructions.(map[string]interface{})
 		manifestInInstructions, tempManifest := stringKeyInMap("manifest", statusInstructions)
@@ -389,7 +389,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			return // Fail state, handled by func, return
 		}
 
-		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
 	case "invoking":
 		// Start invoking
 		targetGolem.Status = "invoking"
@@ -399,7 +399,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, targetGolem, "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
 	default:
 		// Error state, newStatus passed validation but not caught by switch statement
 		//TODO: this
@@ -487,6 +487,9 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 		responses.SendRes(w, responses.Generic_Failure, nil, resMsg)
 		return false, thisUser, udb, userInfo
 	}
+
+	// Lastly, GetGolemListWithPublicInfo
+	thisUser.Golems = schema.UpdateGolemListLinkedData(thisUser, thisUser.Golems) 
 	return true, thisUser, udb, userInfo
 }
 
@@ -541,7 +544,7 @@ func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database
 	}
 	// Updated successfully
 	log.Debug.Printf("Spawned new %s golem for username %s", archetype, userData.Username)
-	responses.SendRes(w, responses.Generic_Success, newGolem, "")
+	responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, newGolem), "")
 	return true
 }
 
@@ -690,7 +693,7 @@ func GetGolemsByArchetype(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	filteredList := schema.FilterGolemListByArchetype(userData.Golems, archetype)
+	filteredList := schema.UpdateGolemListLinkedData(userData, schema.FilterGolemListByArchetype(userData.Golems, archetype))
 	// getInvokerJsonString, getInvokerJsonStringErr := responses.JSON(filteredList)
 	// if getInvokerJsonStringErr != nil {
 	// 	log.Error.Printf("Error in GetInvGetGolemsByArchetypeokers, could not format invokers as JSON. invokers: %v, error: %v", userData, getInvokerJsonStringErr)
