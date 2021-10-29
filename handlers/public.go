@@ -257,12 +257,7 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 	var resources map[string]schema.Resource
 	var resourceNodes map[string]schema.ResourceNode
 
-	world, worldErr := schema.World_get_from_db(wdb, ".")
-	if worldErr != nil {
-		log.Error.Printf("Could not get world from DB! Err: %v", worldErr)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get world")
-		return
-	}
+	world = schema.WorldInfo
 	regions = schema.Regions
 	locales, localesErr := schema.Locale_get_all_from_db(wdb)
 	if localesErr != nil {

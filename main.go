@@ -84,12 +84,7 @@ func initializeWorldDB(wdb rdb.Database) {
 	if world_json_err != nil {
 		log.Error.Fatalf("Could not unmarshal world json: %v", world_json_err)
 	}
-	world_save_err := schema.World_save_to_db(wdb, world)
-	if world_save_err != nil {
-		// Fail state, crash as world required
-		log.Error.Fatalf("Failed saving world during wdb init, err: %v", world_save_err)
-	}
-	schema.Test_world_initialized(wdb, world)
+	schema.WorldInfo = world
 
 	// --Regions--
 	regions, region_json_err := schema.Region_unmarshal_all_json(filemngr.ReadJSON(regionJSONPath))
