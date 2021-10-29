@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/rdb"
@@ -15,7 +16,7 @@ import (
 type Market struct {
 	Thing
 	Pricing map[string]PricingInfo `json:"pricing" binding:"required"`
-	STock map[string]int `json:"stock" binding:"required"`
+	Stock map[string]int `json:"stock" binding:"required"`
 	Consumption map[string]int `json:"consumption" binding:"required"`
 	Production map[string]int `json:"production" binding:"required"`
 }
@@ -26,6 +27,8 @@ type PricingInfo struct {
 	Max int `json:"max" binding:"required"`
 	Sensitivity int `json:"sensitivity" binding:"required"`
 }
+
+var LastMarketTick time.Time = time.Now()
 
 // Unmarshals market from json byte array
 func Market_unmarshal_json(market_json []byte) (Market, error) {

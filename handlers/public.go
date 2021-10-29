@@ -261,12 +261,7 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 
 	world = schema.WorldInfo
 	regions = schema.Regions
-	locales, localesErr := schema.Locale_get_all_from_db(wdb)
-	if localesErr != nil {
-		log.Error.Printf("Could not get locales from DB! Err: %v", localesErr)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get locales")
-		return
-	}
+	locales = schema.Locales
 	routes = schema.Routes
 	resources = schema.Resources
 	resourceNodes, resourceNodesErr := schema.ResourceNode_get_all_from_db(wdb)
@@ -276,10 +271,9 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	recipes = schema.Recipes
-	markets, marketsErr := schema.Market_get_all_from_db(wdb)
-	if marketsErr != nil {
-		log.Error.Printf("Could not get markets from DB! Err :%v", marketsErr)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get markets")
+	gotMarkets, markets, wdb := secureGetMarkets(w, r)
+	if !gotMarkets {
+		// could not get markets, return as handled by func
 		return
 	}
 

@@ -29,8 +29,8 @@ const (
 	WorldDBContext
 )
 
-// Gets ResourceNode for target_node if in the locale specified by locale_path
-func getTargetResNodeFromLocale(w http.ResponseWriter, r *http.Request, locale_path string, target_node string) (bool, schema.ResourceNode) {
+// Gets ResourceNode for target_node if in the locale specified by location_symbol
+func getTargetResNodeFromLocale(w http.ResponseWriter, r *http.Request, location_symbol string, target_node string) (bool, schema.ResourceNode) {
 	// Get wdb
 	wdbSuccess, wdb := GetWdbFromCtx(w, r)
 	if !wdbSuccess {
@@ -39,16 +39,11 @@ func getTargetResNodeFromLocale(w http.ResponseWriter, r *http.Request, locale_p
 	}
 	// Success state, got wdb
 	// Get locale data from db
-	cur_locale, localeErr := schema.Locale_get_from_db(wdb, locale_path)
-	if localeErr != nil {
-		log.Error.Printf("Could not get locale %s from db: %v", locale_path, localeErr)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "locale corresponding to specified golem's location could not be gotten")
-		return false, schema.ResourceNode{}
-	}
+	cur_locale := schema.Locales[location_symbol]
 	// Find resNodes for relevant locale
 	if len(cur_locale.ResourceNodeSymbols) < 1 {
 		// Fail case, no resNodes found
-		log.Error.Printf("Golem has no available resource nodes! locale_path: %s | target_node: %s | Locale: %v", locale_path, target_node, cur_locale)
+		log.Error.Printf("Golem has no available resource nodes! location_symbol: %s | target_node: %s | Locale: %v", location_symbol, target_node, cur_locale)
 		responses.SendRes(w, responses.No_Resource_Nodes_At_Location, nil, "")
 		return false, schema.ResourceNode{}
 	}
@@ -56,8 +51,8 @@ func getTargetResNodeFromLocale(w http.ResponseWriter, r *http.Request, locale_p
 	return foundTargetNode, res_node
 }
 
-// Gets route for target_route if in the locale specified by locale_path
-func getTargetRouteFromLocale(w http.ResponseWriter, r *http.Request, locale_path string, target_route string) (bool, schema.Route) {
+// Gets route for target_route if in the locale specified by location_symbol
+func getTargetRouteFromLocale(w http.ResponseWriter, r *http.Request, location_symbol string, target_route string) (bool, schema.Route) {
 	// Get wdb
 	wdbSuccess, wdb := GetWdbFromCtx(w, r)
 	if !wdbSuccess {
@@ -66,16 +61,11 @@ func getTargetRouteFromLocale(w http.ResponseWriter, r *http.Request, locale_pat
 	}
 	// Success state, got wdb
 	// Get locale data from db
-	cur_locale, localeErr := schema.Locale_get_from_db(wdb, locale_path)
-	if localeErr != nil {
-		log.Error.Printf("Could not get locale %s from db: %v", locale_path, localeErr)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "locale corresponding to specified golem's location could not be gotten")
-		return false, schema.Route{}
-	}
+	cur_locale := schema.Locales[location_symbol]
 	// Find routes for relevant locale
 	if len(cur_locale.RouteSymbols) < 1 {
 		// Fail case, no routes found
-		log.Error.Printf("Golem has no available routes! locale_path: %s | target_route: %s | Locale: %v", locale_path, target_route, cur_locale)
+		log.Error.Printf("Golem has no available routes! location_symbol: %s | target_route: %s | Locale: %v", location_symbol, target_route, cur_locale)
 		responses.SendRes(w, responses.No_Available_Routes, nil, "")
 		return false, schema.Route{}
 	}
@@ -161,8 +151,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			return
 		}
 		// Get ResourceNodes for golem locale
-		locale_path := fmt.Sprintf("[\"%s\"]", targetGolem.LocationSymbol)
-		gotNode, res_node := getTargetResNodeFromLocale(w, r, locale_path, target_node.(string))
+		gotNode, res_node := getTargetResNodeFromLocale(w, r, targetGolem.LocationSymbol, target_node.(string))
 		if !gotNode {
 			return // Fail state, handled by func, return
 		}
@@ -189,8 +178,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			return
 		}
 		// Get routes for golem locale
-		locale_path := fmt.Sprintf("[\"%s\"]", targetGolem.LocationSymbol)
-		gotRoute, cur_route := getTargetRouteFromLocale(w, r, locale_path, target_route.(string))  
+		gotRoute, cur_route := getTargetRouteFromLocale(w, r, targetGolem.LocationSymbol, target_route.(string))  
 		if !gotRoute {
 			return // Fail state, handled by func, return
 		}
@@ -472,6 +460,28 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 	return true, thisUser, udb, userInfo
 }
 
+// Returns: OK, markets, wdb
+func secureGetMarkets(w http.ResponseWriter, r *http.Request) (bool, map[string]schema.Market, rdb.Database) {
+	nilMkt := make(map[string]schema.Market)
+	// Get wdb
+	wdbSuccess, wdb := GetWdbFromCtx(w, r)
+	if !wdbSuccess {
+		log.Debug.Printf("Could not get wdb from ctx")
+		return false, nilMkt, rdb.Database{} // Fail state, could not get wdb, handled by func - simply return
+	}
+	// Success state, got wdb
+
+	markets, marketsErr := gamelogic.CalculateAllMarketTicks(wdb)
+	if marketsErr != nil {
+		// Fail state could not calculate market ticks
+		resMsg := fmt.Sprintf("calcErr: %v", marketsErr)
+		responses.SendRes(w, responses.Generic_Failure, nil, resMsg)
+		return false, nilMkt, wdb
+	}
+
+	return true, markets, wdb
+}
+
 // Check user data for ritual in list of known rituals
 func doesUserKnowRitual(userData schema.User, ritualKey string) (bool) {
 	for _, ritual := range userData.KnownRituals {
@@ -668,6 +678,30 @@ func ItineraryInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Cyan("-- End ItineraryInfo --"))
 }
 
+// Handler function for the secure route: GET /api/v0/my/markets
+func MarketInfo(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- MarketInfo --"))
+	OK, userData, _, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	ok, markets, _ := secureGetMarkets(w, r)
+	if !ok {
+		return // fail state, handled already
+	}
+	res := make(map[string]schema.Market)
+	merchants := schema.FilterGolemListByArchetype(userData.Golems, "merchant")
+	for _, merchant := range merchants {
+		if locale, ok := schema.Locales[merchant.LocationSymbol]; ok {
+			for _, mktSymbol := range locale.MarketSymbols {
+				res[mktSymbol] = markets[mktSymbol]
+			}
+		}
+	}
+	responses.SendRes(w, responses.Generic_Success, res, "")
+	log.Debug.Println(log.Cyan("-- End MarketInfo --"))
+}
+
 // Handler function for the secure route: GET /api/v0/my/golems
 func GetGolems(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Println(log.Yellow("-- GetGolems --"))
@@ -689,11 +723,6 @@ func GetGolemsByArchetype(w http.ResponseWriter, r *http.Request) {
 		return // Failure states handled by secureGetUser, simply return
 	}
 	filteredList := schema.UpdateGolemListLinkedData(userData, schema.FilterGolemListByArchetype(userData.Golems, archetype))
-	// getInvokerJsonString, getInvokerJsonStringErr := responses.JSON(filteredList)
-	// if getInvokerJsonStringErr != nil {
-	// 	log.Error.Printf("Error in GetInvGetGolemsByArchetypeokers, could not format invokers as JSON. invokers: %v, error: %v", userData, getInvokerJsonStringErr)
-	// }
-	// log.Debug.Printf("Sending response for GetGolemsByArchetype:\n%v", getInvokerJsonString)
 	responses.SendRes(w, responses.Generic_Success, filteredList, "")
 	log.Debug.Println(log.Cyan("-- End GetGolemsByArchetype --"))
 }

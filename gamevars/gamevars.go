@@ -31,3 +31,5 @@ var Starting_Rituals []string = []string{
 // Starting Location
 var Starting_Location = "A-G"
 
+// Market Consumption Rate
+var Market_Consumption_Rate int64 = 60

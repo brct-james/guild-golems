@@ -100,12 +100,7 @@ func initializeWorldDB(wdb rdb.Database) {
 	if locale_json_err != nil {
 		log.Error.Fatalf("Could not unmarshal locale json: %v", locale_json_err)
 	}
-	locale_save_err := schema.Locale_save_all_to_db(wdb, locales)
-	if locale_save_err != nil {
-		// Fail state, crash as locale required
-		log.Error.Fatalf("Failed saving locale during wdb init, err: %v", locale_save_err)
-	}
-	schema.Test_locale_initialized(wdb, locales)
+	schema.Locales = locales
 
 	// --Routes--
 	routes, route_json_err := schema.Route_unmarshal_all_json(filemngr.ReadJSON(routeJSONPath))
@@ -173,6 +168,7 @@ func handle_requests() {
 	secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
 	secure.HandleFunc("/inventories", handlers.InventoryInfo).Methods("GET")
 	secure.HandleFunc("/itineraries", handlers.ItineraryInfo).Methods("GET")
+	secure.HandleFunc("/markets", handlers.MarketInfo).Methods("GET")
 	secure.HandleFunc("/golems", handlers.GetGolems).Methods("GET")
 	secure.HandleFunc("/golems/{archetype}", handlers.GetGolemsByArchetype).Methods("GET")
 	secure.HandleFunc("/golem/{symbol}", handlers.GolemInfo).Methods("GET")

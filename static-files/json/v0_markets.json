@@ -34,7 +34,8 @@
       "WATER": 1000,
       "HERBS": 200,
       "PEPPERMINT": 60,
-      "SALT": 30
+      "SALT": 30,
+      "T1_HEALTH_POTION": 10
     },
     "consumption": {
       "WATER": 300,
@@ -63,7 +64,8 @@
       }
     },
     "stock": {
-      "LOGS": 100
+      "LOGS": 100,
+      "BASIC_FURNITURE": 0
     },
     "consumption": {
       "LOGS": 40

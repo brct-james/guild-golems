@@ -106,8 +106,6 @@ Versioning Convention: `major.minor.hotfix`
 - - - - executed at current market price in 100 unit increments
 - - - - fail to execute because market price does not meet order criteria (for example, if price changes to be lower than the player anticipated)
 - market consumption:
-- - every 60s consumption then production are calculated
-- - consumption always occurs, even with an empty inventory
 - - prices determined by quantity of goods in inventory, empty inventory yields max price the store is willing to pay, effective price minimums yielded by pricing equation
 - - - `math.Floor((max_price_delta/(1+(quantity/sensitivity))) + min_price)+1` +1 because floor will mean max price only applies when completely out of stock
 - - - - where min_price defines the horizontal asymptote (json_min_price - 1)
@@ -116,10 +114,6 @@ Versioning Convention: `major.minor.hotfix`
 - - - - Desmos ex: `\frac{399}{\left(1+\left(\frac{x}{1000}\right)\right)}+1` such that 400 is max price, 1 is min price, price at 1k stock is 200, 2k is 100, 4k is 80. `sensitivity=1000` is therefore a fairly insensitive option
 - - - - Ex: `\frac{399}{\left(1+\left(\frac{x}{100}\right)\right)}+1` such that price is still 1-400, but with `sensitivity=100` it is far more sensitive, such that at 100 stock price is 200, at 1k price is ~37, at 2k ~20, at 4k ~11
 - cannot buy from market if inventory is empty
-- market production:
-- - production # is concurrent crafts at location
-- - production always occurs, even with an empty inventory, simulating NPC sales of critical goods to the shop
-- `.../my/markets` get info on markets where you have at least one merchant stationed
 
 ---
 
@@ -302,6 +296,14 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - - Added salt resource & harvesting node
 - - Added basic_furntire resource
 - - Added t1_health_potion resource
+- Markets v0
+- - Consumption
+- - - every 60s consumption then production are calculated
+- - - consumption always occurs, even with an empty inventory
+- - Production:
+- - - production # is concurrent crafts at location
+- - - production always occurs, even with an empty inventory, simulating NPC sales of critical goods to the shop
+- - `.../my/markets` get info on markets where you have at least one merchant stationed
 
 ### v0.4
 
