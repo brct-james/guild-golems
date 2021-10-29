@@ -265,12 +265,7 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get locales")
 		return
 	}
-	routes, routesErr := schema.Route_get_all_from_db(wdb)
-	if routesErr != nil {
-		log.Error.Printf("Could not get routes from DB! Err: %v", routesErr)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get routes")
-		return
-	}
+	routes = schema.Routes
 	resources = schema.Resources
 	resourceNodes, resourceNodesErr := schema.ResourceNode_get_all_from_db(wdb)
 	if resourceNodesErr != nil {

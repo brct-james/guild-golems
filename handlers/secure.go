@@ -137,13 +137,7 @@ func getRouteDataIfTargetRouteInCurLocaleRoutes(w http.ResponseWriter, r *http.R
 	}
 
 	// Get route data
-	route_path := fmt.Sprintf("[\"%s\"]", target_route_symbol)
-	cur_route, route_err := schema.Route_get_from_db(wdb, route_path)
-	if route_err != nil {
-		log.Error.Printf("Could not get route %s from db: %v", route_path, route_err)
-		responses.SendRes(w, responses.WDB_Get_Failure, nil, "specified route could not be gotten")
-		return false, schema.Route{}
-	}
+	cur_route := schema.Routes[target_route_symbol]
 	return true, cur_route
 }
 

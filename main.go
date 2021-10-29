@@ -110,12 +110,7 @@ func initializeWorldDB(wdb rdb.Database) {
 	if route_json_err != nil {
 		log.Error.Fatalf("Could not unmarshal route json: %v", route_json_err)
 	}
-	route_save_err := schema.Route_save_all_to_db(wdb, routes)
-	if route_save_err != nil {
-		// Fail state, crash as route required
-		log.Error.Fatalf("Failed saving route during wdb init, err: %v", route_save_err)
-	}
-	schema.Test_route_initialized(wdb, routes)
+	schema.Routes = routes
 
 	// --Resources--
 	resources, resource_json_err := schema.Resource_unmarshal_all_json(filemngr.ReadJSON(resourceJSONPath))
