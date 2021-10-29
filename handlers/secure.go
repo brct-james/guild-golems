@@ -241,14 +241,6 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			manifest[k] = int(v.(float64))
 		}
 
-		// Get wdb
-		wdbSuccess, wdb := GetWdbFromCtx(w, r)
-		if !wdbSuccess {
-			log.Debug.Printf("Could not get wdb from ctx")
-			return // Fail state, could not get wdb, handled by func - simply return
-		}
-		// Success state, got wdb
-
 		// Get resources in locale inventory at golem location
 		
 		gotInv, locInv := schema.GetInventoryByKey(targetGolem.LocationSymbol, userData.Inventories)
@@ -287,14 +279,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		// Validate golem inventory can hold the amount of items specified in manifest before saving to db
 		newCapacity := 0.0
 		for symbol, quantity := range userData.Inventories[targetGolem.Symbol].Contents {
-			res_path := fmt.Sprintf("[\"%s\"]", symbol)
-			res, getResErr := schema.Resource_get_from_db(wdb, res_path)
-			if getResErr != nil {
-				// fail state, could not get res from db'
-				resMsg := fmt.Sprintf("res_path: %s", res_path)
-				responses.SendRes(w, responses.WDB_Get_Failure, nil, resMsg)
-				return
-			}
+			res := schema.ResourcesMap[symbol]
 			// success state
 			newCapacity += res.CapacityPerUnit * float64(quantity)
 		}

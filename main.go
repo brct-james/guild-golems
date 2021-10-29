@@ -132,12 +132,7 @@ func initializeWorldDB(wdb rdb.Database) {
 	if resource_json_err != nil {
 		log.Error.Fatalf("Could not unmarshal resource json: %v", resource_json_err)
 	}
-	resource_save_err := schema.Resource_save_all_to_db(wdb, resources)
-	if resource_save_err != nil {
-		// Fail state, crash as resource required
-		log.Error.Fatalf("Failed saving resource during wdb init, err: %v", resource_save_err)
-	}
-	schema.Test_resource_initialized(wdb, resources)
+	schema.ResourcesMap = resources
 
 	// --Resource Nodes--
 	resourceNodes, resourceNode_json_err := schema.ResourceNode_unmarshal_all_json(filemngr.ReadJSON(resourceNodeJSONPath))
