@@ -33,13 +33,31 @@
     "drop_tables": [
       {
         "resource_symbol": "HERBS",
-        "harvest_amount": 10,
+        "harvest_amount": 2,
         "rarity": 1
       },
       {
         "resource_symbol": "PEPPERMINT",
         "harvest_amount": 1,
         "rarity": 0.1
+      }
+    ]
+  },
+  "A-TL|SALT": {
+    "name": "Derive Salt from Seawater",
+    "symbol": "A-TL|SALT",
+    "description": "NaCl",
+    "harvest_time": 60,
+    "drop_tables": [
+      {
+        "resource_symbol": "SALT",
+        "harvest_amount": 5,
+        "rarity": 1
+      },
+      {
+        "resource_symbol": "SALT",
+        "harvest_amount": 5,
+        "rarity": 0.5
       }
     ]
   }

@@ -1,0 +1,23 @@
+{
+  "RECIPE:BASIC_FURNITURE": {
+    "name": "Craft Basic Furniture",
+    "symbol": "RECIPE:BASIC_FURNITURE",
+    "description": "Basic furniture, hewn from the cheapest logs that could be found.",
+    "product_amount": 1,
+    "craft_duration": 30,
+    "ingredients": {
+      "LOGS": 10
+    }
+  },
+  "RECIPE:T1_HEALTH_POTION": {
+    "name": "Brew Tier 1 Health Potion",
+    "symbol": "RECIPE:T1_HEALTH_POTION",
+    "description": "While stronger health potions are cut with water to improve margins, these are 90% water by design.",
+    "product_amount": 10,
+    "craft_duration": 60,
+    "ingredients": {
+      "WATER": 90,
+      "HERBS": 10
+    }
+  }
+}

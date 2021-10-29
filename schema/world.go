@@ -19,6 +19,8 @@ type WorldSummaryResponse struct {
 	Routes map[string]Route `json:"routes" binding:"required"`
 	Resources map[string]Resource `json:"resources" binding:"required"`
 	ResourceNodes map[string]ResourceNode `json:"resource_nodes" binding:"required"`
+	Recipes map[string]Recipe `json:"recipes" binding:"required"`
+	Markets map[string]Market `json:"markets" bidning:"required"`
 }
 
 var WorldInfo World

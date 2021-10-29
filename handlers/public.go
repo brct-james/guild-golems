@@ -256,6 +256,8 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 	var routes map[string]schema.Route
 	var resources map[string]schema.Resource
 	var resourceNodes map[string]schema.ResourceNode
+	var recipes map[string]schema.Recipe
+	var markets map[string]schema.Market
 
 	world = schema.WorldInfo
 	regions = schema.Regions
@@ -273,6 +275,13 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get resourceNodes")
 		return
 	}
+	recipes = schema.Recipes
+	markets, marketsErr := schema.Market_get_all_from_db(wdb)
+	if marketsErr != nil {
+		log.Error.Printf("Could not get markets from DB! Err :%v", marketsErr)
+		responses.SendRes(w, responses.WDB_Get_Failure, nil, "could not get markets")
+		return
+	}
 
 	res := schema.WorldSummaryResponse{
 		World: world,
@@ -281,6 +290,8 @@ func LocationsOverview(w http.ResponseWriter, r *http.Request) {
 		Routes: routes,
 		Resources: resources,
 		ResourceNodes: resourceNodes,
+		Recipes: recipes,
+		Markets: markets,
 	}
 	responses.SendRes(w, responses.Generic_Success, res, "")
 	log.Debug.Println(log.Cyan("-- End locationsOverview -- "))

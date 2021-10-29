@@ -22,5 +22,23 @@
     "name": "Peppermint",
     "description": "Why is it spicy",
     "capacity_per_unit": 0.25
+  },
+  "SALT": {
+    "symbol": "SALT",
+    "name": "Salt",
+    "description": "Makes everything taste better, even rabbit stew",
+    "capacity_per_unit": 0.1
+  },
+  "BASIC_FURNITURE": {
+    "symbol": "BASIC_FURNITURE",
+    "name": "Basic Furniture",
+    "description": "Not comfortable, not functional, just barely usable",
+    "capacity_per_unit": 100
+  },
+  "T1_HEALTH_POTION": {
+    "symbol": "T1_HEALTH_POTION",
+    "name": "Tier 1 Health Potion",
+    "description": "A barebones health potion, too watered down to use in combat, primarily used domestically for minor injuries like papercuts",
+    "capacity_per_unit": 10
   }
 }

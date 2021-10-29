@@ -24,6 +24,8 @@ var localeJSONPath string = "./static-files/json/v0_locales.json"
 var resourceJSONPath string = "./static-files/json/v0_resources.json"
 var resourceNodeJSONPath string = "./static-files/json/v0_resource_nodes.json"
 var routeJSONPath string = "./static-files/json/v0_routes.json"
+var recipeJSONPath string = "./static-files/json/v0_recipes.json"
+var marketJSONPath string = "./static-files/json/v0_markets.json"
 
 // Game Configuration
 // in user-metrics.go: activityThresholdInMinutes controls what users are considered 'active'
@@ -36,7 +38,7 @@ var dbMap = map[string]int{
 
 // Global Vars
 
-var apiVersion string = "v0.3"
+var apiVersion string = "v0.4"
 var (
 	ListenPort = ":50242"
 	RedisAddr = "localhost:6380"
@@ -130,6 +132,25 @@ func initializeWorldDB(wdb rdb.Database) {
 		log.Error.Fatalf("Failed saving resourcenode during wdb init, err: %v", resourceNode_save_err)
 	}
 	schema.Test_resourcenode_initialized(wdb, resourceNodes)
+
+	// --Recipes--
+	recipes, recipe_json_err := schema.Recipe_unmarshal_all_json(filemngr.ReadJSON(recipeJSONPath))
+	if recipe_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal recipe json: %v", recipe_json_err)
+	}
+	schema.Recipes = recipes
+
+	// --Markets--
+	markets, market_json_err := schema.Market_unmarshal_all_json(filemngr.ReadJSON(marketJSONPath))
+	if market_json_err != nil {
+		log.Error.Fatalf("Could not unmarshal market json: %v", market_json_err)
+	}
+	market_save_err := schema.Market_save_all_to_db(wdb, markets)
+	if market_save_err != nil {
+		// Fail state, crash as market required
+		log.Error.Fatalf("Failed saving market during wdb init, err: %v", market_save_err)
+	}
+	schema.Test_market_initialized(wdb, markets)
 }
 
 func handle_requests() {

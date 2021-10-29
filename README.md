@@ -87,12 +87,9 @@ Versioning Convention: `major.minor.hotfix`
 
 ### In-Progress
 
-**[v0.4]** Load resources and other static data to memory rather than the db
+**[v0.5]** MVP
 
-- Resources, Routes, World, Regions
-- Leaving ResourceNodes and Locales for now (locales will contain market data, resnodes may eventually have global components)
-
-### Planned: v0.5 MVP
+- Initial Balance Pass
 
 **[v0.5]** Merchants v0
 
@@ -108,15 +105,21 @@ Versioning Convention: `major.minor.hotfix`
 - - - orders are always handled one of two ways:
 - - - - executed at current market price in 100 unit increments
 - - - - fail to execute because market price does not meet order criteria (for example, if price changes to be lower than the player anticipated)
-- market rates semi-dynamic & affected by other players
-- - market inventory of locally consumed resources
-- - set consumption rate for each locale
-- - locale markets only buy resources relevant to their needs
-- - price depends on various factors per good per location
-- - - price = math.Ceiling(math.Min(min_price, max_price / ((1+(x/max_goods-x))^sensitivity)))
-- - - - where sensitivity is > 0: sensitivity=1 is linear, <1 is stable near the center, >1 is stable near the edges.
-- - - - requires a check that x is not greater than max_goods, if so simply return the min_price
-- - cannot buy if market inventory is empty
+- market consumption:
+- - every 60s consumption then production are calculated
+- - consumption always occurs, even with an empty inventory
+- - prices determined by quantity of goods in inventory, empty inventory yields max price the store is willing to pay, effective price minimums yielded by pricing equation
+- - - `math.Floor((max_price_delta/(1+(quantity/sensitivity))) + min_price)+1` +1 because floor will mean max price only applies when completely out of stock
+- - - - where min_price defines the horizontal asymptote (json_min_price - 1)
+- - - - where max_price_delta is the difference between min_price and max_price (json_max_price - min_price)
+- - - - where sensitivity defines the steepness of the curve (defines the vertical asymptote)
+- - - - Desmos ex: `\frac{399}{\left(1+\left(\frac{x}{1000}\right)\right)}+1` such that 400 is max price, 1 is min price, price at 1k stock is 200, 2k is 100, 4k is 80. `sensitivity=1000` is therefore a fairly insensitive option
+- - - - Ex: `\frac{399}{\left(1+\left(\frac{x}{100}\right)\right)}+1` such that price is still 1-400, but with `sensitivity=100` it is far more sensitive, such that at 100 stock price is 200, at 1k price is ~37, at 2k ~20, at 4k ~11
+- cannot buy from market if inventory is empty
+- market production:
+- - production # is concurrent crafts at location
+- - production always occurs, even with an empty inventory, simulating NPC sales of critical goods to the shop
+- `.../my/markets` get info on markets where you have at least one merchant stationed
 
 ---
 
@@ -131,18 +134,24 @@ Versioning Convention: `major.minor.hotfix`
 - nerf golem mana regen bonus to like 0.1 ea or something instead of 1
 - can use items from local inventory (for now just hardcode A-G) as component
 
+**[v0.6]** Market Improvements
+
+- Consumption should be dynamic, and increase when more stock is available
+
 **[v0.7]** Balance Pass & Various Refactors
 
 - Initial balance pass:
 - - Ritual mana cost
 - - Mana regen & invoker bonus
-- - Resource gain rates
-- - Market prices
+- - Resource harvest rates
+- - Market prices, consumption, production rates / recipes
+- - Travel times
 - Refactor the bloat in schema & handlers (helper funcs) into more appropriate locations
 - - golem search funcs could be an interface method, perhaps schema funcs should all be?
 - Convert all routes to kebab-case, all json and private vars/funcs to snake_case
 - Refactor large funcs
 - Refactor packing and storing in changeStatus into sub functions
+- Refactor locations route & world summary response
 
 **[v0.7]** Various Endpoints & Merchants FOW
 
@@ -284,6 +293,16 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 
 ## Changelog
 
+### v0.5
+
+- Recipes v-1
+- - Added recipes to schema and static-files
+- Tulorme
+- - Added Tulorme locale
+- - Added salt resource & harvesting node
+- - Added basic_furntire resource
+- - Added t1_health_potion resource
+
 ### v0.4
 
 - Inventories & Couriers v0
@@ -297,6 +316,9 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - Travel Info -> Itineraries Refactor
 - - itineraries stored like inventories, as a map, rather than accessing the golem for setting/getting travel info, simply access the itinerary
 - - - like inventories, calls to get all golem info need to lookup the relevant itinerary
+- Load resources and other static data to memory rather than the db
+- - Resources, Routes, World, Regions
+- - Leaving ResourceNodes and Locales for now (locales will contain market data, resnodes may eventually have global components)
 
 ### v0.3
 

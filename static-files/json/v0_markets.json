@@ -1,0 +1,137 @@
+{
+  "A-G:GGS": {
+    "name": "Gorod General Store",
+    "symbol": "A-G:GGS",
+    "description": "If you can consume it, Gorod General Store stocks it.",
+    "pricing": {
+      "WATER": {
+        "min": 1,
+        "max": 3,
+        "sensitivity": 100
+      },
+      "HERBS": {
+        "min": 1,
+        "max": 30,
+        "sensitivity": 10
+      },
+      "PEPPERMINT": {
+        "min": 5,
+        "max": 120,
+        "sensitivity": 100
+      },
+      "T1_HEALTH_POTION": {
+        "min": 2,
+        "max": 60,
+        "sensitivity": 100
+      },
+      "SALT": {
+        "min": 4,
+        "max": 8,
+        "sensitivity": 10
+      }
+    },
+    "stock": {
+      "WATER": 1000,
+      "HERBS": 200,
+      "PEPPERMINT": 60,
+      "SALT": 30
+    },
+    "consumption": {
+      "WATER": 300,
+      "HERBS": 50,
+      "PEPPERMINT": 20,
+      "SALT": 30
+    },
+    "production": {
+      "T1_HEALTH_POTION": 3
+    }
+  },
+  "A-G:CC": {
+    "name": "Crappy Carpentry",
+    "symbol": "A-G:CC",
+    "description": "A carpentry shop serving the lowly peasant class in Gorod.",
+    "pricing": {
+      "LOGS": {
+        "min": 3,
+        "max": 10,
+        "sensitivity": 10
+      },
+      "BASIC_FURNITURE": {
+        "min": 30,
+        "max": 100,
+        "sensitivity": 10
+      }
+    },
+    "stock": {
+      "LOGS": 100
+    },
+    "consumption": {
+      "LOGS": 40
+    },
+    "production": {
+      "BASIC_FURNITURE": 2
+    }
+  },
+  "A-TL:YFNBA": {
+    "name": "Your Friendly Neighborhood Back Alley",
+    "symbol": "A-TL:YFNBA",
+    "description": "Anything and everything is bought and sold in Tulorme, most of which in back alleys like this.",
+    "pricing": {
+      "WATER": {
+        "min": 2,
+        "max": 4,
+        "sensitivity": 1000
+      },
+      "HERBS": {
+        "min": 3,
+        "max": 50,
+        "sensitivity": 10
+      },
+      "PEPPERMINT": {
+        "min": 10,
+        "max": 240,
+        "sensitivity": 100
+      },
+      "T1_HEALTH_POTION": {
+        "min": 3,
+        "max": 90,
+        "sensitivity": 100
+      },
+      "LOGS": {
+        "min": 4,
+        "max": 15,
+        "sensitivity": 10
+      },
+      "BASIC_FURNITURE": {
+        "min": 60,
+        "max": 200,
+        "sensitivity": 10
+      },
+      "SALT": {
+        "min": 2,
+        "max": 4,
+        "sensitivity": 100
+      }
+    },
+    "stock": {
+      "WATER": 3000,
+      "HERBS": 1000,
+      "PEPPERMINT": 500,
+      "T1_HEALTH_POTION": 100,
+      "LOGS": 200,
+      "BASIC_FURNITURE": 10,
+      "SALT": 200
+    },
+    "consumption": {
+      "WATER": 300,
+      "HERBS": 120,
+      "PEPPERMINT": 100,
+      "T1_HEALTH_POTION": 20,
+      "LOGS": 50,
+      "BASIC_FURNITURE": 5
+    },
+    "production": {
+      "SALT": 10
+    }
+  }
+}
