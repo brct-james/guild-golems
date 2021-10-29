@@ -96,12 +96,7 @@ func initializeWorldDB(wdb rdb.Database) {
 	if region_json_err != nil {
 		log.Error.Fatalf("Could not unmarshal region json: %v", region_json_err)
 	}
-	region_save_err := schema.Region_save_all_to_db(wdb, regions)
-	if region_save_err != nil {
-		// Fail state, crash as region required
-		log.Error.Fatalf("Failed saving region during wdb init, err: %v", region_save_err)
-	}
-	schema.Test_region_initialized(wdb, regions)
+	schema.Regions = regions
 
 	// --Locales--
 	locales, locale_json_err := schema.Locale_unmarshal_all_json(filemngr.ReadJSON(localeJSONPath))
@@ -132,7 +127,7 @@ func initializeWorldDB(wdb rdb.Database) {
 	if resource_json_err != nil {
 		log.Error.Fatalf("Could not unmarshal resource json: %v", resource_json_err)
 	}
-	schema.ResourcesMap = resources
+	schema.Resources = resources
 
 	// --Resource Nodes--
 	resourceNodes, resourceNode_json_err := schema.ResourceNode_unmarshal_all_json(filemngr.ReadJSON(resourceNodeJSONPath))

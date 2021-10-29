@@ -279,7 +279,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		// Validate golem inventory can hold the amount of items specified in manifest before saving to db
 		newCapacity := 0.0
 		for symbol, quantity := range userData.Inventories[targetGolem.Symbol].Contents {
-			res := schema.ResourcesMap[symbol]
+			res := schema.Resources[symbol]
 			// success state
 			newCapacity += res.CapacityPerUnit * float64(quantity)
 		}

@@ -89,6 +89,9 @@ Versioning Convention: `major.minor.hotfix`
 
 **[v0.4]** Load resources and other static data to memory rather than the db
 
+- Resources, Routes, World, Regions
+- Leaving ResourceNodes and Locales for now (locales will contain market data, resnodes may eventually have global components)
+
 ### Planned: v0.5 MVP
 
 **[v0.5]** Merchants v0

@@ -19,7 +19,7 @@ type InventoryResource struct {
 	Quantity int `json:"quantity" binding:"required"`
 }
 
-var ResourcesMap map[string]Resource
+var Resources map[string]Resource
 
 // Unmarshals resource from json byte array
 func Resource_unmarshal_json(resource_json []byte) (Resource, error) {
