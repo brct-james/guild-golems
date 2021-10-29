@@ -17,7 +17,7 @@ func CalculateTravelArrived(userData schema.User) (schema.User) {
 	for i, golem := range userData.Golems {
 		if strings.EqualFold(golem.Status, "traveling") {
 			// Success, traveling, check if complete
-			arrTime := time.Unix(golem.TravelInfo.ArrivalTime, 0)
+			arrTime := time.Unix(userData.Itineraries[golem.Symbol].ArrivalTime, 0)
 			now := time.Now()
 			if arrTime.Before(now) {
 				// Travel complete
@@ -25,6 +25,8 @@ func CalculateTravelArrived(userData schema.User) (schema.User) {
 				userData.Golems[i].Status = "idle"
 				userData.Golems[i].LocationSymbol = userData.Golems[i].StatusDetail
 				userData.Golems[i].StatusDetail = ""
+				delete(userData.Itineraries, golem.Symbol)
+				userData.Golems[i].Itinerary = schema.Itinerary{}
 			}
 		}
 	}
@@ -32,7 +34,7 @@ func CalculateTravelArrived(userData schema.User) (schema.User) {
 	return userData
 }
 
-func CalcualteArrivalTime(travelTime int, archetype string) (time.Time) {
+func CalculateArrivalTime(travelTime int, archetype string) (time.Time) {
 	// Buff travel time for couriers
 	if archetype == "courier" {
 		travelTime = int(float64(travelTime) * 0.75)

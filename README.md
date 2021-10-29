@@ -33,6 +33,7 @@ Go-based server for a fantasy-themed guild management game
 - `POST: /api/v0/users/{username}/claim` attempts to claim the specified username, returns the user data after creation, including token which users must save to access private routes
 - `GET: /api/v0/my/account` returns the private user data (includes token)
 - `GET: /api/v0/my/inventories` returns the inventories of each location and golem that currently contain resources
+- `GET: /api/v0/my/itineraries` returns the active itineraries for all golems
 - `GET: /api/v0/my/golems` list all golems owned
 - `GET: /api/v0/my/golems/{archetype}` list all golems owned filtered by archetype
 - `GET: /api/v0/my/golem/{symbol}` get info on the specified golem
@@ -86,11 +87,6 @@ Versioning Convention: `major.minor.hotfix`
 
 ### In-Progress
 
-**[v0.4]** Travel Info -> Itineraries Refactor
-
-- itineraries stored like inventories, as a map, rather than accessing the golem for setting/getting travel info, simply access the itinerary
-- - like inventories, calls to get all golem info need to lookup the relevant itinerary
-
 **[v0.4]** Load resources and other static data to memory rather than the db
 
 ### Planned: v0.5 MVP
@@ -143,6 +139,7 @@ Versioning Convention: `major.minor.hotfix`
 - - golem search funcs could be an interface method, perhaps schema funcs should all be?
 - Convert all routes to kebab-case, all json and private vars/funcs to snake_case
 - Refactor large funcs
+- Refactor packing and storing in changeStatus into sub functions
 
 **[v0.7]** Various Endpoints & Merchants FOW
 
@@ -287,7 +284,6 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 ### v0.4
 
 - Inventories & Couriers v0
-
 - - Inventories are per-location, with golems having their own inventories for moving goods between locations
 - - - Easiest way is probably storing golem inventories in inventory map, using golem symbol as key
 - - `.../my/inventory` inventory report showing what resources are at each location
@@ -295,6 +291,9 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - - - v0: simply moving resources between locations, based on a set speed and capacity
 - - - summoning and getting info
 - - - `packing` & `storing` instructions specify what to load/unload to/from the golem's inventory from/to the locale's inventory | {"manifest": {"LOGS": 10,"HERBS": 15}}
+- Travel Info -> Itineraries Refactor
+- - itineraries stored like inventories, as a map, rather than accessing the golem for setting/getting travel info, simply access the itinerary
+- - - like inventories, calls to get all golem info need to lookup the relevant itinerary
 
 ### v0.3
 

@@ -171,6 +171,7 @@ func handle_requests() {
 	secure.Use(auth.GenerateTokenValidationMiddlewareFunc(userDatabase))
 	secure.HandleFunc("/account", handlers.AccountInfo).Methods("GET")
 	secure.HandleFunc("/inventories", handlers.InventoryInfo).Methods("GET")
+	secure.HandleFunc("/itineraries", handlers.ItineraryInfo).Methods("GET")
 	secure.HandleFunc("/golems", handlers.GetGolems).Methods("GET")
 	secure.HandleFunc("/golems/{archetype}", handlers.GetGolemsByArchetype).Methods("GET")
 	secure.HandleFunc("/golem/{symbol}", handlers.GolemInfo).Methods("GET")

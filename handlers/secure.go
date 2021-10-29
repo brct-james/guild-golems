@@ -196,7 +196,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		}
 		// Get routes for golem locale
 		locale_path := fmt.Sprintf("[\"%s\"]", targetGolem.LocationSymbol)
-		gotRoute, cur_route := getTargetRouteFromLocale(w, r, locale_path, target_route.(string))
+		gotRoute, cur_route := getTargetRouteFromLocale(w, r, locale_path, target_route.(string))  
 		if !gotRoute {
 			return // Fail state, handled by func, return
 		}
@@ -205,7 +205,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		destinationSymbol := strings.Split(cur_route.Symbol, "|")[1]
 		// Start travel
 		// May set route danger as well later, to have a result calculated after travel completed
-		targetGolem.TravelInfo.ArrivalTime = gamelogic.CalcualteArrivalTime(cur_route.TravelTime, targetGolem.Archetype).Unix()
+		targetGolem.Itinerary = schema.CreateOrUpdateItinerary(targetGolem.Symbol, userData, gamelogic.CalculateArrivalTime(cur_route.TravelTime, targetGolem.Archetype).Unix(), targetGolem.LocationSymbol, destinationSymbol, cur_route.DangerLevel)
 		targetGolem.Status = "traveling"
 		targetGolem.StatusDetail = destinationSymbol
 		// Save to DB
@@ -671,6 +671,22 @@ func InventoryInfo(w http.ResponseWriter, r *http.Request) {
 	log.Debug.Printf("Sending response for InventoryInfo:\n%v", getUserJsonString)
 	responses.SendRes(w, responses.Generic_Success, userData.Inventories, "")
 	log.Debug.Println(log.Cyan("-- End InventoryInfo --"))
+}
+
+// Handler function for the secure route: GET /api/v0/my/itineraries
+func ItineraryInfo(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- ItineraryInfo --"))
+	OK, userData, _, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	getUserJsonString, getUserJsonStringErr := responses.JSON(userData)
+	if getUserJsonStringErr != nil {
+		log.Error.Printf("Error in ItineraryInfo, could not format thisUser as JSON. userData: %v, error: %v", userData, getUserJsonStringErr)
+	}
+	log.Debug.Printf("Sending response for ItineraryInfo:\n%v", getUserJsonString)
+	responses.SendRes(w, responses.Generic_Success, userData.Itineraries, "")
+	log.Debug.Println(log.Cyan("-- End ItineraryInfo --"))
 }
 
 // Handler function for the secure route: GET /api/v0/my/golems

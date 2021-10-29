@@ -16,24 +16,30 @@ type Golem struct {
 	StatusDetail string `json:"status-detail" binding:"required"`
 	Capacity float64 `json:"capacity" binding:"required"`
 	Inventory Inventory `json:"inventory" binding:"required"`
-	TravelInfo GolemTravelInfo `json:"travel_info" binding:"required"`
+	Itinerary Itinerary `json:"itinerary" binding:"required"`
 }
 
 func UpdateGolemLinkedData(userData User, targetGolem Golem) (Golem) {
+	// Inventory
 	targetGolem.Inventory = userData.Inventories[targetGolem.Symbol]
+	// Itinerary
+	targetGolem.Itinerary = userData.Itineraries[targetGolem.Symbol]
 	return targetGolem
 }
 
 func UpdateGolemListLinkedData(userData User, golemList []Golem) ([]Golem) {
 	for k, g := range golemList {
+		// Inventory
 		g.Inventory = userData.Inventories[g.Symbol]
 		golemList[k] = g
+		// Itinerary
+		g.Itinerary = userData.Itineraries[g.Symbol]
 	}
 	return golemList
 }
 
 // Defines relevant info for golems while traveling
-type GolemTravelInfo struct {
+type Itinerary struct {
 	ArrivalTime int64 `json:"arrival_time" binding:"required"`
 	OriginSymbol string `json:"origin_symbol" binding:"required"`
 	DestinationSymbol string `json:"destination_symbol" binding:"required"`
@@ -108,12 +114,7 @@ func NewGolem(symbol string, archetype string, location string, startingStatus s
 			LocationSymbol: symbol,
 			Contents: make(map[string]int),
 		},
-		TravelInfo: GolemTravelInfo{
-			ArrivalTime: 0,
-			OriginSymbol: "",
-			DestinationSymbol: "",
-			RouteDanger: 0,
-		},
+		Itinerary: Itinerary{},
 	}
 }
 

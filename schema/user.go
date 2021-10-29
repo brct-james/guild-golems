@@ -18,8 +18,9 @@ type User struct {
 	ManaDetails
 	Golems []Golem `json:"golems" binding:"required"`
 	LastHarvestTick int64 `json:"last-harvest-tick" binding:"required"`
-	Inventories map[string]Inventory `json:"inventories" binding:"required"`
 	KnownRituals []string `json:"known-rituals" binding:"required"`
+	Inventories map[string]Inventory `json:"inventories" binding:"required"`
+	Itineraries map[string]Itinerary `json:"itineraries" binding:"required"`
 }
 
 // Defines the public User info for the /users/{username} endpoint
@@ -42,6 +43,16 @@ type ManaDetails struct {
 type Inventory struct {
 	LocationSymbol string `json:"location-symbol" binding:"required"`
 	Contents map[string]int `json:"contents" binding:"required"`
+}
+
+func CreateOrUpdateItinerary(key string, userData *User, arrivalTime int64, originSymbol string, destinationSymbol string, routeDanger int) (Itinerary) {
+	userData.Itineraries[key] = Itinerary{
+		ArrivalTime: arrivalTime,
+		OriginSymbol: originSymbol,
+		DestinationSymbol: destinationSymbol,
+		RouteDanger: routeDanger,
+	}
+	return userData.Itineraries[key]
 }
 
 func GetInventoryByKey(key string, dict map[string]Inventory) (bool, Inventory) {
@@ -85,6 +96,7 @@ func NewUser(token string, username string) User {
 		},
 		Golems: make([]Golem, 0),
 		Inventories: make(map[string]Inventory),
+		Itineraries: make(map[string]Itinerary),
 		KnownRituals: gamevars.Starting_Rituals,
 		LastHarvestTick: now,
 	}
