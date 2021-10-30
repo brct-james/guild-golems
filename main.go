@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/brct-james/guild-golems/auth"
+	"github.com/brct-james/guild-golems/clearinghouse"
 	"github.com/brct-james/guild-golems/filemngr"
 	"github.com/brct-james/guild-golems/handlers"
 	"github.com/brct-james/guild-golems/log"
@@ -74,6 +75,11 @@ func main() {
 
 	log.Info.Println("Loading secrets from envfile")
 	auth.LoadSecretsToEnv()
+
+	// Start goroutine for handling market orders
+	clearinghouse.UserDatabase = userDatabase
+	clearinghouse.WorldDatabase = worldDatabase
+	go clearinghouse.ProcessMarketOrder()
 
 	// Begin serving
 	handle_requests()
@@ -178,6 +184,7 @@ func handle_requests() {
 	secure.HandleFunc("/rituals/summon-invoker", handlers.NewInvoker).Methods("POST")
 	secure.HandleFunc("/rituals/summon-harvester", handlers.NewHarvester).Methods("POST")
 	secure.HandleFunc("/rituals/summon-courier", handlers.NewCourier).Methods("POST")
+	secure.HandleFunc("/rituals/summon-merchant", handlers.NewMerchant).Methods("POST")
 
 	// Start listening
 	log.Info.Printf("Listening on %s", ListenPort)

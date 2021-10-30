@@ -4,7 +4,8 @@ package gamevars
 // Golem Capacity
 var Capacity_Invoker float64 = 0
 var Capacity_Harvester float64 = 10
-var Capacity_Courier float64 = 100
+var Capacity_Courier float64 = 200
+var Capacity_Merchant float64 = 100
 
 // Base Locale Capacity
 // UNIMPLEMENTED
@@ -26,6 +27,7 @@ var Starting_Rituals []string = []string{
 	"summon-invoker",
 	"summon-harvester",
 	"summon-courier",
+	"summon-merchant",
 }
 
 // Starting Location

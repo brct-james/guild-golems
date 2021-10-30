@@ -28,6 +28,16 @@ type PricingInfo struct {
 	Sensitivity int `json:"sensitivity" binding:"required"`
 }
 
+// Defines the characteristics of Orders
+type Order struct {
+	MarketSymbol string `json:"market_symbol" binding:"required"`
+	Type string `json:"type" binding:"required"`
+	ItemSymbol string `json:"item_symbol" binding:"required"`
+	Quantity int `json:"quantity" binding:"required"`
+	TargetPrice int `json:"target_price" binding:"required"`
+	ForceExecution bool `json:"force_execution" binding:"required"`
+}
+
 var LastMarketTick time.Time = time.Now()
 
 // Unmarshals market from json byte array
@@ -44,7 +54,7 @@ func Market_unmarshal_json(market_json []byte) (Market, error) {
 // Attempt to save market, returns error or nil
 func Market_save_to_db(wdb rdb.Database, market Market) (error) {
 	log.Debug.Printf("Saving market to DB")
-	marketPath := fmt.Sprintf(".%s", market.Symbol)
+	marketPath := fmt.Sprintf("[\"%s\"]", market.Symbol)
 	err := wdb.SetJsonData("markets", marketPath, market)
 	return err
 }

@@ -10,5 +10,6 @@ require (
 	github.com/gomodule/redigo v1.8.3 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/joho/godotenv v1.3.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/nitishm/go-rejson/v4 v4.0.0 // indirect
 )

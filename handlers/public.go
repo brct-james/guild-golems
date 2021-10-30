@@ -12,18 +12,11 @@ import (
 	"github.com/brct-james/guild-golems/rdb"
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
+	"github.com/brct-james/guild-golems/tokengen"
 	"github.com/gorilla/mux"
 )
 
 // Helper Functions
-
-// Attempt to save user, returns error or nil if successful
-func SaveUserToDB(udb rdb.Database, userData schema.User) error {
-	log.Debug.Printf("Saving user %s to DB", userData.Username)
-	err := udb.SetJsonData(userData.Token, ".", userData)
-	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
-	return err
-}
 
 // Attempt to get udb from context, return udb, nil if successful else return rdb.Database{}, nil
 func GetUdbFromCtx(r *http.Request) (rdb.Database, error) {
@@ -153,7 +146,7 @@ func UsernameInfo(w http.ResponseWriter, r *http.Request) {
 	username := route_vars["username"]
 	log.Debug.Printf("UsernameInfo Requested for: %s", username)
 	// Get username info from DB
-	token, genTokenErr := auth.GenerateToken(username)
+	token, genTokenErr := tokengen.GenerateToken(username)
 	if genTokenErr != nil {
 		// fail state
 		log.Important.Printf("in UsernameInfo: Attempted to generate token using username %s but was unsuccessful with error: %v", username, genTokenErr)
@@ -201,7 +194,7 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// generate token
-	token, genTokenErr := auth.GenerateToken(username)
+	token, genTokenErr := tokengen.GenerateToken(username)
 	if genTokenErr != nil {
 		// fail state
 		log.Important.Printf("in UsernameClaim: Attempted to generate token using username %s but was unsuccessful with error: %v", username, genTokenErr)
@@ -227,7 +220,7 @@ func UsernameClaim(w http.ResponseWriter, r *http.Request) {
 	}
 	// create new user in DB
 	newUser := schema.NewUser(token, username)
-	saveUserErr := SaveUserToDB(udb, newUser)
+	saveUserErr := schema.SaveUserToDB(udb, newUser)
 	if saveUserErr != nil {
 		// fail state - could not save
 		saveUserErrMsg := fmt.Sprintf("in UsernameClaim | Username: %v | CreateNewUserInDB failed, dbSaveResult: %v", username, saveUserErr)

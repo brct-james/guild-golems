@@ -55,6 +55,12 @@ const (
 	Manifest_Overflow ResponseCode = 29
 	No_Storable_Items ResponseCode = 30
 	Blank_Manifest_Disallowed ResponseCode = 31
+	Blank_Order_Disallowed ResponseCode = 32
+	Merchant_Inventory_Empty ResponseCode = 33
+	Invalid_Order_Type ResponseCode = 34
+	Insufficient_Resources_Held ResponseCode = 35
+	Clearinghouse_Spool_Error ResponseCode = 36
+	Could_Not_Decode_Order ResponseCode = 37
 )
 
 // Defines Response structure for output
@@ -139,6 +145,18 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 		message = "[No_Storable_Items] No storable items in the specified golem's inventory"
 	case 31:
 		message = "[Blank_Manifest_Disallowed] Manifest cannot be blank, please includes items to load"
+	case 32:
+		message = "[Blank_Order_Disallowed] Order cannot be blank, please includes order type, item symbol, quantity, target price, and force_execution"
+	case 33:
+		message = "[Merchant_Inventory_Empty] Merchant must be holding the items you wish to sell"
+	case 34:
+		message = "[Invalid_Order_Type] Type of the specified order does not match any known type"
+	case 35:
+		message = "[Insufficient_Resources_Held] The specified action could not be completed due to insufficient resources in golem inventory"
+	case 36:
+		message = "[Clearinghouse_Spool_Error] Order incorrectly spooled by clearinhouse, could not execute when asked"
+	case 37:
+		message = "[Could_Not_Decode_Order] Error occurred while decoding order, ensure formatting is correct"
 	default:
 		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/brct-james/guild-golems/gamevars"
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/rdb"
+	"github.com/brct-james/guild-golems/tokengen"
 )
 
 // Defines a user which has Name, Symbol, Description
@@ -95,7 +96,15 @@ func NewUser(token string, username string) User {
 			LastManaTick: now,
 		},
 		Golems: make([]Golem, 0),
-		Inventories: make(map[string]Inventory),
+		// Inventories: make(map[string]Inventory),
+		Inventories: map[string]Inventory{
+			"A-G": {
+				LocationSymbol: "A-G",
+				Contents: map[string]int {
+					"LOGS": 100,
+				},
+			},
+		},
 		Itineraries: make(map[string]Itinerary),
 		KnownRituals: gamevars.Starting_Rituals,
 		LastHarvestTick: now,
@@ -138,4 +147,29 @@ func GetUserFromDB (token string, udb rdb.Database) (User, bool, error) {
 		return User{}, false, unmarshalErr
 	}
 	return uData, true, nil
+}
+
+// Get user from DB by username, bool is user found
+func GetUserByUsernameFromDB(username string, udb rdb.Database) (User, bool, error) {
+	token, tokenErr := tokengen.GenerateToken(username)
+	if tokenErr != nil {
+		return User{}, false, tokenErr
+	}
+	return GetUserFromDB(token, udb)
+}
+
+// Attempt to save user, returns error or nil if successful
+func SaveUserToDB(udb rdb.Database, userData User) error {
+	log.Debug.Printf("Saving user %s to DB", userData.Username)
+	err := udb.SetJsonData(userData.Token, ".", userData)
+	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
+	return err
+}
+
+// Attempt to save user data at path, returns error or nil if successful
+func SaveUserDataAtPathToDB(udb rdb.Database, userData User, path string, newValue interface{}) error {
+	log.Debug.Printf("Saving user %s at path %s to DB", userData.Username, path)
+	err := udb.SetJsonData(userData.Token, path, newValue)
+	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
+	return err
 }

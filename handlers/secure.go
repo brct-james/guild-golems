@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/brct-james/guild-golems/auth"
+	"github.com/brct-james/guild-golems/clearinghouse"
 	"github.com/brct-james/guild-golems/gamelogic"
 	"github.com/brct-james/guild-golems/gamevars"
 	"github.com/brct-james/guild-golems/log"
@@ -18,6 +19,7 @@ import (
 	"github.com/brct-james/guild-golems/responses"
 	"github.com/brct-james/guild-golems/schema"
 	"github.com/gorilla/mux"
+	"github.com/mitchellh/mapstructure"
 )
 
 // HELPER FUNCTIONS
@@ -367,6 +369,75 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			return // Fail state, handled by func, return
 		}
 		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+	case "transacting":
+		// Start transacting - body decides order type
+		statusInstructions := reqBody.Instructions.(map[string]interface{})
+		orderInInstructions, tempOrder := stringKeyInMap("order", statusInstructions)
+		if !orderInInstructions {
+			// Fail case
+			log.Debug.Printf("'order' key required for 'transacting' status")
+			responses.SendRes(w, responses.Bad_Request, nil, "'order' key required for 'transacting' status")
+			return
+		}
+		if len(tempOrder.(map[string]interface{})) < 1 {
+			// Fail case
+			responses.SendRes(w, responses.Blank_Order_Disallowed, nil, "")
+			return
+		}
+		// Convert order to schema.Order from map[string]interface{}
+		order := schema.Order{}
+		decoder, decodeErr := mapstructure.NewDecoder(&mapstructure.DecoderConfig{TagName:"json", Result:&order})
+		decoder.Decode(tempOrder)
+		if decodeErr != nil {
+			// Fail case, could not decode order
+			responses.SendRes(w, responses.Could_Not_Decode_Order, nil, "")
+			return
+		}
+		order.Type = strings.ToUpper(order.Type)
+		switch order.Type {
+		case "SELL":
+			// Get resources in golem inventory
+			gotInv, golInv := schema.GetInventoryByKey(targetGolem.Symbol, userData.Inventories)
+			if !gotInv {
+				// Fail case - no items in inventory
+				responses.SendRes(w, responses.Insufficient_Resources_Held, nil, "")
+				return
+			}
+			// Validate and handle sell order
+			contains, amountContained := schema.DoesInventoryContain(golInv, order.ItemSymbol, order.Quantity)
+			if !contains {
+				// Fail case - invalid order, specified item not contained in sufficient quantity
+				resMsg := fmt.Sprintf("Item: %s, Amount contained: %d", order.ItemSymbol, amountContained)
+				responses.SendRes(w, responses.Insufficient_Resources_Held, nil, resMsg)
+				return
+			}
+
+			// Spool Market Order & Get Order Reference
+			targetGolem.Status = "transacting"
+			targetGolem.StatusDetail = clearinghouse.Spool(order, userData.Username, targetGolem.Symbol)
+
+			// Save Golem to DB
+			savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+			if !savedToDb {
+				return // Fail state, handled by func, return
+			}
+
+			// Tell clearinghouse to execute order specified by reference string
+			executed := clearinghouse.Execute(targetGolem.StatusDetail)
+			if !executed {
+				// Fail state, server error!
+				log.Error.Printf("Clearinghouse.Execute called but could not execute, reference string: %s", targetGolem.StatusDetail)
+				responses.SendRes(w, responses.Clearinghouse_Spool_Error, nil, "")
+			}
+			// Success case
+			
+			// It should be safe to use UpdateGolemLinkedData here without losing the ORDER information in statusdetail - order manager works on the database directly so no race condition
+			responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+		default:
+			// Invalid order type
+			responses.SendRes(w, responses.Invalid_Order_Type, nil, "")
+			return
+		}
 	default:
 		// Error state, newStatus passed validation but not caught by switch statement
 		//TODO: this
@@ -523,10 +594,10 @@ func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database
 	newGolemSymbol := fmt.Sprintf("%s-%d", schema.GolemArchetypes[archetype].Abbreviation, newGolemId)
 	newGolem := schema.NewGolem(newGolemSymbol, archetype, locationSymbol, startingStatus, capacity)
 	userData.Golems = append(userData.Golems, newGolem)
-	saveUserErr := SaveUserToDB(udb, userData)
+	saveUserErr := schema.SaveUserToDB(udb, userData)
 	if saveUserErr != nil {
 		// fail state - could not save
-		saveUserErrMsg := fmt.Sprintf("in createNewGolemInDB | Username: %v | SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
+		saveUserErrMsg := fmt.Sprintf("in createNewGolemInDB | Username: %v | schema.SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
 		log.Debug.Println(saveUserErrMsg)
 		responses.SendRes(w, responses.DB_Save_Failure, nil, saveUserErrMsg)
 		return false
@@ -577,10 +648,10 @@ func GetUDBAndSaveUserToDB(w http.ResponseWriter, r *http.Request, userData sche
 		responses.SendRes(w, responses.UDB_Update_Failed, nil, "")
 		return false
 	}
-	saveUserErr := SaveUserToDB(udb, userData)
+	saveUserErr := schema.SaveUserToDB(udb, userData)
 	if saveUserErr != nil {
 		// fail state - could not save
-		saveUserErrMsg := fmt.Sprintf("in GetUDBAndSaveUserToDB | Username: %v | SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
+		saveUserErrMsg := fmt.Sprintf("in GetUDBAndSaveUserToDB | Username: %v | schema.SaveUserToDB failed, dbSaveResult: %v", userData.Username, saveUserErr)
 		log.Debug.Println(saveUserErrMsg)
 		responses.SendRes(w, responses.DB_Save_Failure, nil, saveUserErrMsg)
 		return false
@@ -829,6 +900,20 @@ func NewCourier(w http.ResponseWriter, r *http.Request) {
 		return // Failure states handled by createNewGolemInDB, simply return
 	}
 	log.Debug.Println(log.Cyan("-- End NewCourier --"))
+}
+
+// Handler function for the secure route: POST /api/v0/my/rituals/summon-merchant
+func NewMerchant(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- NewMerchant --"))
+	OK, userData, udb, _ := secureGetUser(w, r)
+	if !OK {
+		return // Failure states handled by secureGetUser, simply return
+	}
+	success := createNewGolemInDB(w, r, udb, userData, "merchant", gamevars.Starting_Location, "summon-merchant", "idle", gamevars.Capacity_Merchant)
+	if !success {
+		return // Failure states handled by createNewGolemInDB, simply return
+	}
+	log.Debug.Println(log.Cyan("-- End NewMerchant --"))
 }
 
 // Handler function for the secure route: PUT /api/v0/my/invokers/{symbol}

@@ -65,6 +65,7 @@ Go-based server for a fantasy-themed guild management game
 - - - `harvesting` instructions specify what node to harvest | {"node_symbol": "A-G|FOUNTAIN-WATER"}
 - - - `packing` instructions specify what to pack into the golem inventory from the local inventory | {"manifest": {"LOGS":1,"HERBS":10}}
 - - - `storing` instructions specify what to store into the local inventory from the golem inventory | {"manifest": {"HERBS":5}}
+- - - `transacting` instructions specify what type of market order to create | {"order": {"market_symbol":"A-G:GGS", "type":"SELL", "item_symbol": "LOGS", "quantity": 9, "target_price": 5, "force_execution": true}}
 
 ---
 
@@ -90,20 +91,22 @@ Versioning Convention: `major.minor.hotfix`
 **[v0.5]** MVP
 
 - Initial Balance Pass
+- Convert golems slice to map on user
 
 **[v0.5]** Merchants v0
 
 - `.../my/merchants` buying/selling
-- have to be holding the items to sell them, and are limited in buy price by capacity
+- have to be holding the items to sell them, and are limited in buy quantity by capacity
 - have large capacities, but not as large as couriers
 - simple buy/sell orders
+- - while order is in queue merchant is stuck on "transacting" status, after queue handles order the status is automatically updated
 - - request body contains item, amount, target sell price/target buy price or an override to force order execution at market rate regardless of price
 - - if price does not meet criteria, action will not go through
 - markets for each major locale
 - - server market order queue
 - - - orders enter the queue and are processed sequentially
 - - - orders are always handled one of two ways:
-- - - - executed at current market price in 100 unit increments
+- - - - executed at current market price
 - - - - fail to execute because market price does not meet order criteria (for example, if price changes to be lower than the player anticipated)
 - market consumption:
 - - prices determined by quantity of goods in inventory, empty inventory yields max price the store is willing to pay, effective price minimums yielded by pricing equation
@@ -114,6 +117,15 @@ Versioning Convention: `major.minor.hotfix`
 - - - - Desmos ex: `\frac{399}{\left(1+\left(\frac{x}{1000}\right)\right)}+1` such that 400 is max price, 1 is min price, price at 1k stock is 200, 2k is 100, 4k is 80. `sensitivity=1000` is therefore a fairly insensitive option
 - - - - Ex: `\frac{399}{\left(1+\left(\frac{x}{100}\right)\right)}+1` such that price is still 1-400, but with `sensitivity=100` it is far more sensitive, such that at 100 stock price is 200, at 1k price is ~37, at 2k ~20, at 4k ~11
 - cannot buy from market if inventory is empty
+
+**Status of the above ^**
+
+- Working on clearinghouse sell flow
+- - coins are added correctly (pricing is being calculated correctly)
+- - - more testing is necessary to ensure that price min check is working in the absence of force_execution
+- - inventories aren't updating correctly as far as i can tell
+- - golem cannot be updated till migrated from slice to map storage on user
+- both secure.go and clearinghouse.go require the buy case to be built out in its entirety
 
 ---
 
@@ -146,6 +158,7 @@ Versioning Convention: `major.minor.hotfix`
 - Refactor large funcs
 - Refactor packing and storing in changeStatus into sub functions
 - Refactor locations route & world summary response
+- Input symbols & stuff from request bodies should be forced to_upper or use a case-insensitive equal function
 
 **[v0.7]** Various Endpoints & Merchants FOW
 
