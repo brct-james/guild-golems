@@ -43,9 +43,9 @@ func CalculateAllMarketTicks(wdb rdb.Database) (map[string]schema.Market, error)
 }
 
 func CalculateMarketPrice(mktPricing schema.PricingInfo, curQuant int) (int) {
-// 	- - - - where min_price defines the horizontal asymptote (json_min_price - 1)
-// - - - - where max_price_delta is the difference between min_price and max_price (json_max_price - min_price)
-// - - - - where sensitivity defines the steepness of the curve (defines the vertical asymptote)
+// where min_price defines the horizontal asymptote (json_min_price - 1)
+// where max_price_delta is the difference between min_price and max_price (json_max_price - min_price)
+// where sensitivity defines the steepness of the curve (defines the vertical asymptote)
 min_price := mktPricing.Min - 1
 max_price_delta := mktPricing.Max - min_price
 sensitivity := mktPricing.Sensitivity

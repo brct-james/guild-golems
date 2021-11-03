@@ -6,6 +6,7 @@ import (
 	"github.com/brct-james/guild-golems/auth"
 	"github.com/brct-james/guild-golems/clearinghouse"
 	"github.com/brct-james/guild-golems/filemngr"
+	"github.com/brct-james/guild-golems/gort"
 	"github.com/brct-james/guild-golems/handlers"
 	"github.com/brct-james/guild-golems/log"
 	"github.com/brct-james/guild-golems/rdb"
@@ -79,7 +80,7 @@ func main() {
 	// Start goroutine for handling market orders
 	clearinghouse.UserDatabase = userDatabase
 	clearinghouse.WorldDatabase = worldDatabase
-	go clearinghouse.ProcessMarketOrder()
+	gort.InvokeContinuous(clearinghouse.ProcessMarketOrder)
 
 	// Begin serving
 	handle_requests()
@@ -175,6 +176,8 @@ func handle_requests() {
 	secure.HandleFunc("/inventories", handlers.InventoryInfo).Methods("GET")
 	secure.HandleFunc("/itineraries", handlers.ItineraryInfo).Methods("GET")
 	secure.HandleFunc("/markets", handlers.MarketInfo).Methods("GET")
+	secure.HandleFunc("/orders", handlers.OrderInfo).Methods("GET")
+	secure.HandleFunc("/orders/{status}", handlers.GetOrdersByStatus).Methods("GET")
 	secure.HandleFunc("/golems", handlers.GetGolems).Methods("GET")
 	secure.HandleFunc("/golems/{archetype}", handlers.GetGolemsByArchetype).Methods("GET")
 	secure.HandleFunc("/golem/{symbol}", handlers.GolemInfo).Methods("GET")

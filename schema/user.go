@@ -17,7 +17,7 @@ type User struct {
 	Token string `json:"token" binding:"required"`
 	PublicUserInfo
 	ManaDetails
-	Golems []Golem `json:"golems" binding:"required"`
+	Golems map[string]Golem `json:"golems" binding:"required"`
 	LastHarvestTick int64 `json:"last-harvest-tick" binding:"required"`
 	KnownRituals []string `json:"known-rituals" binding:"required"`
 	Inventories map[string]Inventory `json:"inventories" binding:"required"`
@@ -29,6 +29,7 @@ type PublicUserInfo struct {
 	Username string `json:"username" binding:"required"`
 	Title string `json:"title" binding:"required"`
 	Coins uint64 `json:"coins" binding:"required"`
+	Escrow map[string]uint64 `json:"escrow" binding:"required"`
 	UserSince int64 `json:"user-since" binding:"required"`
 }
 
@@ -87,6 +88,7 @@ func NewUser(token string, username string) User {
 			Username: username,
 			Title: "",
 			Coins: gamevars.Starting_Coins,
+			Escrow: make(map[string]uint64),
 			UserSince: now,
 		},
 		ManaDetails: ManaDetails{
@@ -95,7 +97,7 @@ func NewUser(token string, username string) User {
 			ManaRegen: gamevars.Starting_Mana_Regen,
 			LastManaTick: now,
 		},
-		Golems: make([]Golem, 0),
+		Golems: make(map[string]Golem),
 		// Inventories: make(map[string]Inventory),
 		Inventories: map[string]Inventory{
 			"A-G": {
@@ -149,6 +151,28 @@ func GetUserFromDB (token string, udb rdb.Database) (User, bool, error) {
 	return uData, true, nil
 }
 
+// Get userdata at path from DB, bool is user found
+func GetUserDataAtPathFromDB (token string, path string, udb rdb.Database) (interface{}, bool, error) {
+	// Get user json
+	uJson, getError := udb.GetJsonData(token, path)
+	if getError != nil {
+		if fmt.Sprint(getError) != "redis: nil" {
+			// user not found
+			return nil, false, nil
+		}
+		// error
+		return nil, false, getError
+	}
+	// Got successfully, unmarshal
+	var uData interface{}
+	unmarshalErr := json.Unmarshal(uJson, &uData)
+	if unmarshalErr != nil {
+		log.Error.Fatalf("Could not unmarshal user json from DB: %v", unmarshalErr)
+		return nil, false, unmarshalErr
+	}
+	return uData, true, nil
+}
+
 // Get user from DB by username, bool is user found
 func GetUserByUsernameFromDB(username string, udb rdb.Database) (User, bool, error) {
 	token, tokenErr := tokengen.GenerateToken(username)
@@ -167,9 +191,8 @@ func SaveUserToDB(udb rdb.Database, userData User) error {
 }
 
 // Attempt to save user data at path, returns error or nil if successful
-func SaveUserDataAtPathToDB(udb rdb.Database, userData User, path string, newValue interface{}) error {
-	log.Debug.Printf("Saving user %s at path %s to DB", userData.Username, path)
-	err := udb.SetJsonData(userData.Token, path, newValue)
-	// creationSuccess := rdb.CreateUser(udb, username, token, 0)
+func SaveUserDataAtPathToDB(udb rdb.Database, token string, path string, newValue interface{}) error {
+	log.Debug.Printf("Saving user data at path %s to DB for token %s", path, token)
+	err := udb.SetJsonData(token, path, newValue)
 	return err
 }

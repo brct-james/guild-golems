@@ -27,15 +27,15 @@ func UpdateGolemLinkedData(userData User, targetGolem Golem) (Golem) {
 	return targetGolem
 }
 
-func UpdateGolemListLinkedData(userData User, golemList []Golem) ([]Golem) {
-	for k, g := range golemList {
+func UpdateGolemMapLinkedData(userData User, golemMap map[string]Golem) (map[string]Golem) {
+	for k, g := range golemMap {
 		// Inventory
 		g.Inventory = userData.Inventories[g.Symbol]
-		golemList[k] = g
+		golemMap[k] = g
 		// Itinerary
 		g.Itinerary = userData.Itineraries[g.Symbol]
 	}
-	return golemList
+	return golemMap
 }
 
 // Defines relevant info for golems while traveling
@@ -144,31 +144,22 @@ func DoesGolemStatusMatch(golem Golem, status string) bool {
 	return strings.EqualFold(golem.Status, status)
 }
 
-func FilterGolemListByArchetype(golems []Golem, archetype string) []Golem {
-	filteredList := make([]Golem, 0)
-	for _, golem := range golems {
+func FilterGolemMapByArchetype(golems map[string]Golem, archetype string) map[string]Golem {
+	filteredMap := make(map[string]Golem)
+	for key, golem := range golems {
 		if DoesGolemArchetypeMatch(golem, archetype) {
-			filteredList = append(filteredList, golem)
+			filteredMap[key] = golem
 		}
 	}
-	return filteredList
+	return filteredMap
 }
 
-func FilterGolemListByStatus(golems []Golem, status string) []Golem {
-	filteredList := make([]Golem, 0)
-	for _, golem := range golems {
+func FilterGolemMapByStatus(golems map[string]Golem, status string) map[string]Golem {
+	filteredMap := make(map[string]Golem)
+	for key, golem := range golems {
 		if DoesGolemStatusMatch(golem, status) {
-			filteredList = append(filteredList, golem)
+			filteredMap[key] = golem
 		}
 	}
-	return filteredList
-}
-
-func FindIndexOfGolemWithSymbol(golems []Golem, symbol string) (bool, int) {
-	for i := range golems {
-		if strings.EqualFold(golems[i].Symbol, symbol) {
-			return true, i
-		}
-	}
-	return false, -1
+	return filteredMap
 }

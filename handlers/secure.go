@@ -133,21 +133,58 @@ func getRouteDataIfTargetRouteInCurLocaleRoutes(w http.ResponseWriter, r *http.R
 	return true, cur_route
 }
 
-func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody schema.GolemStatusUpdateBody, userData *schema.User, targetGolem *schema.Golem) {
+var lockedGolems map[string]map[string]struct{} = make(map[string]map[string]struct{}) // "username": "golemSymbol"
+
+func checkGolemLock(w http.ResponseWriter, username string, symbol string) (bool) {
+	// Check for golem lock
+	log.Debug.Printf("checkGolemLock, usersymb: %s %s lockedGolems: %v", username, symbol, lockedGolems)
+	if _, ok := lockedGolems[username][symbol]; ok {
+		// Locked
+		log.Debug.Printf("checkGolemLock: LOCKED")
+		responses.SendRes(w, responses.Golem_Locked_For_Editing, nil, "")
+		return true
+	}
+	// Lock it ourselves
+	if _, ok := lockedGolems[username]; !ok {
+		// No entry for username, create one
+		lockedGolems[username] = make(map[string]struct{})
+	}
+	lockedGolems[username][symbol] = struct{}{}
+	return false
+}
+
+func unlockGolem(username string, symbol string) {
+	// Unlock golem
+	if len(lockedGolems[username]) > 1 {
+		// Just delete entry for targetGolem
+		log.Debug.Printf("unlockGolem, onlytargetgol %s %s len(lockedGolems[username]): %d, lockedGolems[username][symbol]: %v", username, symbol, len(lockedGolems[username]), lockedGolems[username][symbol])
+		delete(lockedGolems[username], symbol)
+		log.Debug.Printf("%d %v", len(lockedGolems[username]), lockedGolems[username][symbol])
+	} else {
+		log.Debug.Printf("unlockGolem, entireusername %s %s len(lockedGolems[username]): %d", username, symbol, len(lockedGolems[username]))
+		// Delete user's entire entry as this is the last entry
+		delete(lockedGolems, username)
+	}
+	log.Debug.Printf("unlockGolem, UNLOCKED usersym: %s %s lockedGolems: %v", username, symbol, lockedGolems)
+}
+
+func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody schema.GolemStatusUpdateBody, userData schema.User, targetGolem schema.Golem) {
 	switch reqBody.NewStatus {
 	case "idle":
 		targetGolem.Status = "idle"
 		targetGolem.StatusDetail = ""
-		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
+		unlockGolem(userData.Username, targetGolem.Symbol)
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, targetGolem), "")
 	case "harvesting":
 		statusInstructions := reqBody.Instructions.(map[string]interface{})
 		nodeSymbolInInstructions, target_node := stringKeyInMap("node_symbol", statusInstructions)
 		if !nodeSymbolInInstructions {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			log.Debug.Printf("'node_symbol' key required for 'harvesting' status")
 			responses.SendRes(w, responses.Bad_Request, nil, "'node_symbol' key required for 'harvesting' status")
 			return
@@ -155,6 +192,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		// Get ResourceNodes for golem locale
 		gotNode, res_node := getTargetResNodeFromLocale(w, r, targetGolem.LocationSymbol, target_node.(string))
 		if !gotNode {
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			return // Fail state, handled by func, return
 		}
 		// Success, found specified res node in locale and got data on it from wdb
@@ -163,11 +201,12 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		targetGolem.Status = "harvesting"
 		targetGolem.StatusDetail = res_node.Symbol
 		// Save to DB
-		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
+		unlockGolem(userData.Username, targetGolem.Symbol)
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, targetGolem), "")
 	case "traveling":
 		// Check for all expected instructions
 		// Convert Instructions to map with string keys
@@ -175,6 +214,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		routeInInstructions, target_route := stringKeyInMap("route", statusInstructions)
 		if !routeInInstructions {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			log.Debug.Printf("'route' key required for 'traveling' status")
 			responses.SendRes(w, responses.Bad_Request, nil, "'route' key required for 'traveling' status")
 			return
@@ -182,6 +222,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		// Get routes for golem locale
 		gotRoute, cur_route := getTargetRouteFromLocale(w, r, targetGolem.LocationSymbol, target_route.(string))  
 		if !gotRoute {
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			return // Fail state, handled by func, return
 		}
 		// Get destination from cur_route.Symbol
@@ -189,26 +230,29 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		destinationSymbol := strings.Split(cur_route.Symbol, "|")[1]
 		// Start travel
 		// May set route danger as well later, to have a result calculated after travel completed
-		targetGolem.Itinerary = schema.CreateOrUpdateItinerary(targetGolem.Symbol, userData, gamelogic.CalculateArrivalTime(cur_route.TravelTime, targetGolem.Archetype).Unix(), targetGolem.LocationSymbol, destinationSymbol, cur_route.DangerLevel)
+		targetGolem.Itinerary = schema.CreateOrUpdateItinerary(targetGolem.Symbol, &userData, gamelogic.CalculateArrivalTime(cur_route.TravelTime, targetGolem.Archetype).Unix(), targetGolem.LocationSymbol, destinationSymbol, cur_route.DangerLevel)
 		targetGolem.Status = "traveling"
 		targetGolem.StatusDetail = destinationSymbol
 		// Save to DB
-		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		unlockGolem(userData.Username, targetGolem.Symbol)
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, targetGolem), "")
 	case "packing":
 		statusInstructions := reqBody.Instructions.(map[string]interface{})
 		manifestInInstructions, tempManifest := stringKeyInMap("manifest", statusInstructions)
 		if !manifestInInstructions {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			log.Debug.Printf("'manifest' key required for 'packing/storing' status")
 			responses.SendRes(w, responses.Bad_Request, nil, "'manifest' key required for 'packing/storing' status")
 			return
 		}
 		if len(tempManifest.(map[string]interface{})) < 1 {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			responses.SendRes(w, responses.Blank_Manifest_Disallowed, nil, "")
 			return
 		}
@@ -216,6 +260,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		c, ok := tempManifest.(map[string]interface{})
 		if !ok {
 			// cant assert, handle error
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			log.Error.Printf("cant assert tempManifest.(map[string]interface{}")
 			responses.SendRes(w, responses.Generic_Failure, nil, "Cant assert tempManifest.(map[string]interface{}")
 			return
@@ -230,6 +275,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		gotInv, locInv := schema.GetInventoryByKey(targetGolem.LocationSymbol, userData.Inventories)
 		if !gotInv {
 			// Fail case - no items in inventory at location
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			responses.SendRes(w, responses.No_Packable_Items, nil, "")
 			return
 		}
@@ -240,6 +286,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			contains, amountContained := schema.DoesInventoryContain(locInv, symbol, quantity)
 			if !contains {
 				// Fail case - invalid manifest, specified item not contained in sufficient quantity at location
+				unlockGolem(userData.Username, targetGolem.Symbol)
 				resMsg := fmt.Sprintf("Item: %s, Amount contained: %d", symbol, amountContained)
 				responses.SendRes(w, responses.Invalid_Manifest, nil, resMsg)
 				return
@@ -269,6 +316,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		}
 		if newCapacity > targetGolem.Capacity {
 			// fail state, newCapacity exceeds golem max
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			resMsg := fmt.Sprintf("newCapacity %f exceeds golem max %f", newCapacity, targetGolem.Capacity)
 			responses.SendRes(w, responses.Manifest_Overflow, nil, resMsg)
 			return
@@ -280,23 +328,26 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		targetGolem.Status = "idle"
 		targetGolem.StatusDetail = ""
 
-		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
+		unlockGolem(userData.Username, targetGolem.Symbol)
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
 
-		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, targetGolem), "")
 	case "storing":
 		statusInstructions := reqBody.Instructions.(map[string]interface{})
 		manifestInInstructions, tempManifest := stringKeyInMap("manifest", statusInstructions)
 		if !manifestInInstructions {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			log.Debug.Printf("'manifest' key required for 'packing/storing' status")
 			responses.SendRes(w, responses.Bad_Request, nil, "'manifest' key required for 'packing/storing' status")
 			return
 		}
 		if len(tempManifest.(map[string]interface{})) < 1 {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			responses.SendRes(w, responses.Blank_Manifest_Disallowed, nil, "")
 			return
 		}
@@ -304,6 +355,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		c, ok := tempManifest.(map[string]interface{})
 		if !ok {
 			// cant assert, handle error
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			log.Error.Printf("cant assert tempManifest.(map[string]interface{}")
 			responses.SendRes(w, responses.Generic_Failure, nil, "Cant assert tempManifest.(map[string]interface{}")
 			return
@@ -317,6 +369,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		gotInv, golInv := schema.GetInventoryByKey(targetGolem.Symbol, userData.Inventories)
 		if !gotInv {
 			// Fail case - no items in inventory
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			responses.SendRes(w, responses.No_Storable_Items, nil, "")
 			return
 		}
@@ -327,6 +380,7 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 			contains, amountContained := schema.DoesInventoryContain(golInv, symbol, quantity)
 			if !contains {
 				// Fail case - invalid manifest, specified item not contained in sufficient quantity
+				unlockGolem(userData.Username, targetGolem.Symbol)
 				resMsg := fmt.Sprintf("Item: %s, Amount contained: %d", symbol, amountContained)
 				responses.SendRes(w, responses.Invalid_Manifest, nil, resMsg)
 				return
@@ -353,34 +407,39 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		targetGolem.Status = "idle"
 		targetGolem.StatusDetail = ""
 
-		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
+		unlockGolem(userData.Username, targetGolem.Symbol)
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
 
-		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, targetGolem), "")
 	case "invoking":
 		// Start invoking
 		targetGolem.Status = "invoking"
 		targetGolem.StatusDetail = ""
 		// Save to DB
-		savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+		savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
+		unlockGolem(userData.Username, targetGolem.Symbol)
 		if !savedToDb {
 			return // Fail state, handled by func, return
 		}
-		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+		responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, targetGolem), "")
 	case "transacting":
 		// Start transacting - body decides order type
 		statusInstructions := reqBody.Instructions.(map[string]interface{})
 		orderInInstructions, tempOrder := stringKeyInMap("order", statusInstructions)
 		if !orderInInstructions {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			log.Debug.Printf("'order' key required for 'transacting' status")
 			responses.SendRes(w, responses.Bad_Request, nil, "'order' key required for 'transacting' status")
 			return
 		}
 		if len(tempOrder.(map[string]interface{})) < 1 {
 			// Fail case
+			unlockGolem(userData.Username, targetGolem.Symbol)
+			log.Debug.Printf("Order cannot be blank")
 			responses.SendRes(w, responses.Blank_Order_Disallowed, nil, "")
 			return
 		}
@@ -390,57 +449,71 @@ func executeGolemStatusChange(w http.ResponseWriter, r *http.Request, reqBody sc
 		decoder.Decode(tempOrder)
 		if decodeErr != nil {
 			// Fail case, could not decode order
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			responses.SendRes(w, responses.Could_Not_Decode_Order, nil, "")
 			return
 		}
 		order.Type = strings.ToUpper(order.Type)
+		log.Debug.Printf("Order decoded, switch order.Type: %s", order.Type)
 		switch order.Type {
 		case "SELL":
 			// Get resources in golem inventory
 			gotInv, golInv := schema.GetInventoryByKey(targetGolem.Symbol, userData.Inventories)
 			if !gotInv {
 				// Fail case - no items in inventory
+				unlockGolem(userData.Username, targetGolem.Symbol)
 				responses.SendRes(w, responses.Insufficient_Resources_Held, nil, "")
 				return
 			}
+			log.Debug.Printf("Got inv: %v", golInv)
 			// Validate and handle sell order
 			contains, amountContained := schema.DoesInventoryContain(golInv, order.ItemSymbol, order.Quantity)
 			if !contains {
 				// Fail case - invalid order, specified item not contained in sufficient quantity
+				unlockGolem(userData.Username, targetGolem.Symbol)
 				resMsg := fmt.Sprintf("Item: %s, Amount contained: %d", order.ItemSymbol, amountContained)
 				responses.SendRes(w, responses.Insufficient_Resources_Held, nil, resMsg)
 				return
 			}
+			log.Debug.Printf("Validated order, amt cont: %d", amountContained)
 
 			// Spool Market Order & Get Order Reference
+			log.Debug.Printf("SPOOLING MARKET ORDER")
 			targetGolem.Status = "transacting"
 			targetGolem.StatusDetail = clearinghouse.Spool(order, userData.Username, targetGolem.Symbol)
+			log.Debug.Printf("Reference String: %s", targetGolem.StatusDetail)
 
 			// Save Golem to DB
-			savedToDb := GetUDBAndSaveUserToDB(w, r, *userData)
+			savedToDb := GetUDBAndSaveUserToDB(w, r, userData)
 			if !savedToDb {
+				unlockGolem(userData.Username, targetGolem.Symbol)
 				return // Fail state, handled by func, return
 			}
+			log.Debug.Printf("Saved successfully, executing clearinghouse order")
 
 			// Tell clearinghouse to execute order specified by reference string
 			executed := clearinghouse.Execute(targetGolem.StatusDetail)
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			if !executed {
 				// Fail state, server error!
 				log.Error.Printf("Clearinghouse.Execute called but could not execute, reference string: %s", targetGolem.StatusDetail)
 				responses.SendRes(w, responses.Clearinghouse_Spool_Error, nil, "")
 			}
+			log.Debug.Printf("Executed clearinghouse order")
 			// Success case
 			
 			// It should be safe to use UpdateGolemLinkedData here without losing the ORDER information in statusdetail - order manager works on the database directly so no race condition
-			responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(*userData, *targetGolem), "")
+			responses.SendRes(w, responses.Generic_Success, schema.UpdateGolemLinkedData(userData, targetGolem), "")
 		default:
 			// Invalid order type
+			unlockGolem(userData.Username, targetGolem.Symbol)
 			responses.SendRes(w, responses.Invalid_Order_Type, nil, "")
 			return
 		}
 	default:
 		// Error state, newStatus passed validation but not caught by switch statement
 		//TODO: this
+		unlockGolem(userData.Username, targetGolem.Symbol)
 		responses.SendRes(w, responses.Generic_Failure, nil, "Unexpected Error state, newStatus passed validation but not caught by switch statement. Contact developer")
 	}
 }
@@ -473,16 +546,15 @@ func GenerateHandlerMiddlewareFunc(udb rdb.Database, wdb rdb.Database) func(http
 	}
 }
 
-// Get User from Middleware and DB
-// Returns: OK, userData, udb, userAuthPair
-func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, rdb.Database, auth.ValidationPair) {
+// Get UDB & UserInfo from Middleware
+func getUdbAndUserInfo(w http.ResponseWriter, r *http.Request) (bool, rdb.Database, auth.ValidationPair) {
 	// Get udb from context
 	udb, udbErr := GetUdbFromCtx(r)
 	if udbErr != nil {
 		// Fail state getting context
 		log.Error.Printf("Could not get UserDBContext in secureGetUser")
 		responses.SendRes(w, responses.No_UDB_Context, nil, "in secureGetUser")
-		return false, schema.User{}, rdb.Database{}, auth.ValidationPair{}
+		return false, udb, auth.ValidationPair{}
 	}
 	// Get userinfoContext from validation middleware
 	userInfo, userInfoErr := GetValidationFromCtx(r)
@@ -491,9 +563,19 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 		log.Error.Printf("Could not get validationpair in secureGetUser")
 		userInfoErrMsg := fmt.Sprintf("userInfo is nil, check auth validation context %v:\n%v", auth.ValidationContext, r.Context().Value(auth.ValidationContext))
 		responses.SendRes(w, responses.No_AuthPair_Context, nil, userInfoErrMsg)
-		return false, schema.User{}, rdb.Database{}, auth.ValidationPair{}
+		return false, udb, userInfo
 	}
 	log.Debug.Printf("Validated with username: %s and token %s", userInfo.Username, userInfo.Token)
+	return true, udb, userInfo
+}
+
+// Get User from Middleware and DB
+// Returns: OK, userData, udb, userAuthPair
+func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, rdb.Database, auth.ValidationPair) {
+	gotUdb, udb, userInfo := getUdbAndUserInfo(w, r)
+	if !gotUdb {
+		return false, schema.User{}, udb, userInfo // handled by func
+	}
 	// Check db for user
 	thisUser, userFound, getUserErr := schema.GetUserFromDB(userInfo.Token, udb)
 	if getUserErr != nil {
@@ -526,8 +608,8 @@ func secureGetUser(w http.ResponseWriter, r *http.Request) (bool, schema.User, r
 		return false, thisUser, udb, userInfo
 	}
 
-	// Lastly, GetGolemListWithPublicInfo
-	thisUser.Golems = schema.UpdateGolemListLinkedData(thisUser, thisUser.Golems) 
+	// Lastly, GetGolemMapWithPublicInfo
+	thisUser.Golems = schema.UpdateGolemMapLinkedData(thisUser, thisUser.Golems) 
 	return true, thisUser, udb, userInfo
 }
 
@@ -589,11 +671,11 @@ func createNewGolemInDB(w http.ResponseWriter, r *http.Request, udb rdb.Database
 	// 	sameArchetypeGolemIds = append(sameArchetypeGolemIds, golemId)
 	// }
 	// // todo: sort and use ids[-1]+1 for newGolemId
-	var newGolemId int = len(schema.FilterGolemListByArchetype(userData.Golems, archetype))
+	var newGolemId int = len(schema.FilterGolemMapByArchetype(userData.Golems, archetype))
 	
 	newGolemSymbol := fmt.Sprintf("%s-%d", schema.GolemArchetypes[archetype].Abbreviation, newGolemId)
 	newGolem := schema.NewGolem(newGolemSymbol, archetype, locationSymbol, startingStatus, capacity)
-	userData.Golems = append(userData.Golems, newGolem)
+	userData.Golems[newGolemSymbol] = newGolem
 	saveUserErr := schema.SaveUserToDB(udb, userData)
 	if saveUserErr != nil {
 		// fail state - could not save
@@ -761,7 +843,7 @@ func MarketInfo(w http.ResponseWriter, r *http.Request) {
 		return // fail state, handled already
 	}
 	res := make(map[string]schema.Market)
-	merchants := schema.FilterGolemListByArchetype(userData.Golems, "merchant")
+	merchants := schema.FilterGolemMapByArchetype(userData.Golems, "merchant")
 	for _, merchant := range merchants {
 		if locale, ok := schema.Locales[merchant.LocationSymbol]; ok {
 			for _, mktSymbol := range locale.MarketSymbols {
@@ -771,6 +853,32 @@ func MarketInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	responses.SendRes(w, responses.Generic_Success, res, "")
 	log.Debug.Println(log.Cyan("-- End MarketInfo --"))
+}
+
+// Handler function for the secure route: GET /api/v0/my/orders
+func OrderInfo(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- OrderInfo --"))
+	gotUI, _, userInfo := getUdbAndUserInfo(w, r)
+	if !gotUI {
+		return // Handled by func
+	}
+	orders := clearinghouse.GetOrdersByUserWithStatus(userInfo.Username, "*")
+	responses.SendRes(w, responses.Generic_Success, orders, "")
+	log.Debug.Println(log.Cyan("-- End OrderInfo --"))
+}
+
+// Handler function for the secure route: GET /api/v0/my/orders/{status}
+func GetOrdersByStatus(w http.ResponseWriter, r *http.Request) {
+	log.Debug.Println(log.Yellow("-- GetOrdersByStatus --"))
+	route_vars := mux.Vars(r)
+	status := trimTrailingS(route_vars["status"])
+	gotUI, _, userInfo := getUdbAndUserInfo(w, r)
+	if !gotUI {
+		return // Handled by func
+	}
+	orders := clearinghouse.GetOrdersByUserWithStatus(userInfo.Username, status)
+	responses.SendRes(w, responses.Generic_Success, orders, "")
+	log.Debug.Println(log.Cyan("-- End GetOrdersByStatus --"))
 }
 
 // Handler function for the secure route: GET /api/v0/my/golems
@@ -793,7 +901,7 @@ func GetGolemsByArchetype(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
-	filteredList := schema.UpdateGolemListLinkedData(userData, schema.FilterGolemListByArchetype(userData.Golems, archetype))
+	filteredList := schema.UpdateGolemMapLinkedData(userData, schema.FilterGolemMapByArchetype(userData.Golems, archetype))
 	responses.SendRes(w, responses.Generic_Success, filteredList, "")
 	log.Debug.Println(log.Cyan("-- End GetGolemsByArchetype --"))
 }
@@ -925,14 +1033,18 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 	if !OK {
 		return // Failure states handled by secureGetUser, simply return
 	}
+	wasLocked := checkGolemLock(w, userData.Username, symbol)
+	if wasLocked {
+		return // handled by checkgolemlock
+	}
 	// Find golem with symbol
-	found, golemIndex := schema.FindIndexOfGolemWithSymbol(userData.Golems, symbol)
-	if !found {
-		// Not Found
+	golem, ok := userData.Golems[strings.ToUpper(symbol)]
+	if !ok {
 		responses.SendRes(w, responses.No_Golem_Found, nil, "")
 		return
 	}
-	targetGolem := &userData.Golems[golemIndex]
+	log.Debug.Printf("found targetGolem: %s", golem.Symbol)
+	targetGolem := golem
 	currentStatus := targetGolem.Status
 	archetype := targetGolem.Archetype
 
@@ -941,7 +1053,8 @@ func ChangeGolemTask(w http.ResponseWriter, r *http.Request) {
 	if !changeAllowed {
 		return // Fail state, handled by func, return
 	}
+	log.Debug.Printf("StatusChangeAllowed & body: %v", reqBody)
 	// Success state, new status is allowed, complete changes based on request body
-	executeGolemStatusChange(w, r, reqBody, &userData, targetGolem)
+	executeGolemStatusChange(w, r, reqBody, userData, targetGolem)
 	log.Debug.Println(log.Cyan("-- End ChangeGolemTask --"))
 }

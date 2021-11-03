@@ -76,6 +76,20 @@ func (db Database) GetJsonData(key string, path string) ([]uint8, error) {
 	return dataJSON, nil
 }
 
+// Del json data for key at path.
+//
+// Returns # of paths deleted
+func (db Database) DelJsonData(key string, path string) (int64, error) {
+	log.Debug.Printf("New attempt DelJsonData")
+	log.Debug.Printf("Key: '%s', Path: '%s'", key, path)
+	res, err := db.Rejson.JSONDel(key, path)
+	if err != nil {
+		log.Debug.Printf("Failed to JSONDel reason: %v", err)
+		return res.(int64), err
+	}
+	return res.(int64), nil
+}
+
 // Flush database using Goredis
 func (db Database) Flush() error {
 	if err := db.Goredis.FlushDB(context.Background()).Err(); err != nil {

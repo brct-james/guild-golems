@@ -163,6 +163,7 @@ func UsernameInfo(w http.ResponseWriter, r *http.Request) {
 		Username: userData.Username,
 		Title: userData.Title,
 		Coins: userData.Coins,
+		Escrow: userData.Escrow,
 		UserSince: userData.UserSince,
 	}
 	responses.SendRes(w, responses.Generic_Success, resData, "")

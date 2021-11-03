@@ -14,7 +14,7 @@ import (
 func CalculateTravelArrived(userData schema.User) (schema.User) {
 	log.Debug.Println(log.Cyan("-- Begin CalculateTravelArrived --"))
 	log.Debug.Printf("golems: %v", userData.Golems)
-	for i, golem := range userData.Golems {
+	for key, golem := range userData.Golems {
 		if strings.EqualFold(golem.Status, "traveling") {
 			// Success, traveling, check if complete
 			arrTime := time.Unix(userData.Itineraries[golem.Symbol].ArrivalTime, 0)
@@ -22,11 +22,12 @@ func CalculateTravelArrived(userData schema.User) (schema.User) {
 			if arrTime.Before(now) {
 				// Travel complete
 				log.Debug.Printf("%v before %v, setting to idle", arrTime, now)
-				userData.Golems[i].Status = "idle"
-				userData.Golems[i].LocationSymbol = userData.Golems[i].StatusDetail
-				userData.Golems[i].StatusDetail = ""
+				golem.Status = "idle"
+				golem.LocationSymbol = golem.StatusDetail
+				golem.StatusDetail = ""
 				delete(userData.Itineraries, golem.Symbol)
-				userData.Golems[i].Itinerary = schema.Itinerary{}
+				golem.Itinerary = schema.Itinerary{}
+				userData.Golems[key] = golem
 			}
 		}
 	}

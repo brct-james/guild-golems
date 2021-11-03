@@ -92,6 +92,8 @@ Versioning Convention: `major.minor.hotfix`
 
 - Initial Balance Pass
 - Convert golems slice to map on user
+- Disallowed changing status of golem while already handling another request for that golem
+- - Perhaps map of [username][golem-id] that are 'locked' once request received, other requests rejected while locked
 
 **[v0.5]** Merchants v0
 
@@ -117,13 +119,14 @@ Versioning Convention: `major.minor.hotfix`
 - - - - Desmos ex: `\frac{399}{\left(1+\left(\frac{x}{1000}\right)\right)}+1` such that 400 is max price, 1 is min price, price at 1k stock is 200, 2k is 100, 4k is 80. `sensitivity=1000` is therefore a fairly insensitive option
 - - - - Ex: `\frac{399}{\left(1+\left(\frac{x}{100}\right)\right)}+1` such that price is still 1-400, but with `sensitivity=100` it is far more sensitive, such that at 100 stock price is 200, at 1k price is ~37, at 2k ~20, at 4k ~11
 - cannot buy from market if inventory is empty
+- `.../my/orders` for viewing all user orders
+- `.../my/orders/{status}` for filtered user orders by status
 
 **Status of the above ^**
 
 - Working on clearinghouse sell flow
 - - coins are added correctly (pricing is being calculated correctly)
 - - - more testing is necessary to ensure that price min check is working in the absence of force_execution
-- - inventories aren't updating correctly as far as i can tell
 - - golem cannot be updated till migrated from slice to map storage on user
 - both secure.go and clearinghouse.go require the buy case to be built out in its entirety
 
@@ -294,6 +297,10 @@ redis-cli via `redis-cli -p 6380`
 
 `FLUSHDB` for each database (`select #`)
 
+`KEYS *` to get all keys
+
+`JSON.GET <token>` to get particular entry
+
 Recommend running with screen `screen -S guild-golems`. If get detached, can forcibly detach the old ssh session and reattach with `screen -Dr guild-golems`
 
 ---
@@ -317,6 +324,10 @@ Recommend running with screen `screen -S guild-golems`. If get detached, can for
 - - - production # is concurrent crafts at location
 - - - production always occurs, even with an empty inventory, simulating NPC sales of critical goods to the shop
 - - `.../my/markets` get info on markets where you have at least one merchant stationed
+- - Clearinghouse
+- - - Identical reference IDs should be impossible now, even if identical orders are processed in the exact same second (will be given a +x modifier)
+- - User Escrow
+- - - Holds coins in escrow associated with order reference #s [unimplemented]
 
 ### v0.4
 

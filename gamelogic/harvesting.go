@@ -18,19 +18,14 @@ func CalculateResourcesHarvested(userData schema.User, wdb rdb.Database) (schema
 		// no golems
 		return userData, nil
 	}
-	harvesters := schema.FilterGolemListByArchetype(userData.Golems, "harvester")
+	harvesters := schema.FilterGolemMapByStatus(userData.Golems,"harvesting")
 	if len(harvesters) < 1 {
 		// no harvesters
 		return userData, nil
 	}
-	relevantGolems := schema.FilterGolemListByStatus(harvesters,"harvesting")
-	if len(relevantGolems) < 1 {
-		// no harvesting harvesters
-		return userData, nil
-	}
 
 	secondsSinceTick := time.Since(time.Unix(userData.LastHarvestTick, 0)).Seconds()
-	for _, golem := range relevantGolems {
+	for _, golem := range harvesters {
 		if golem.StatusDetail == "" {
 			log.Error.Printf("")
 		}

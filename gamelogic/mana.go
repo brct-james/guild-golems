@@ -31,7 +31,7 @@ func TryManaPurchase(w http.ResponseWriter, mana float64, manaCost float64) (boo
 func CalculateManaRegen(userData schema.User) (schema.User) {
 	log.Debug.Println(log.Cyan("-- Begin CalculateManaRegen --"))
 	secondsSinceTick := time.Since(time.Unix(userData.LastManaTick, 0)).Seconds()
-	numInvokers := len(schema.FilterGolemListByStatus(schema.FilterGolemListByArchetype(userData.Golems, "invoker"), "invoking"))
+	numInvokers := len(schema.FilterGolemMapByStatus(userData.Golems, "invoking"))
 	userData.Mana = math.Min(userData.ManaCap, userData.Mana + (secondsSinceTick * (userData.ManaRegen + (float64(numInvokers)*gamevars.Invoker_Potency))))
 	userData.LastManaTick = time.Now().Unix()
 	log.Debug.Println(log.Cyan("-- End CalculateManaRegen --"))
