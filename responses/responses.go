@@ -61,6 +61,7 @@ const (
 	Insufficient_Resources_Held ResponseCode = 35
 	Clearinghouse_Spool_Error ResponseCode = 36
 	Could_Not_Decode_Order ResponseCode = 37
+	Golem_Locked_For_Editing ResponseCode = 38
 )
 
 // Defines Response structure for output
@@ -70,97 +71,195 @@ type Response struct {
 	Data interface{} `json:"data"`
 }
 
-// Returns the prettified json string of a properly structure api response given the inputs
-func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (string, error) {
-	var message string
-	// Based on code choose base message text
-	switch code {
-	case -3:
-		message = "[CRITICAL_JSON_MARSHAL_ERROR] Server error in responses.JSON, could not marshal JSON_Marshal_Error response! PLEASE contact developer."
-	case -2:
-		message = "[JSON_Marshal_Error] Responses module encountered an error while marshaling response JSON. Please contact developer."
-	case -1:
-		message = "[Unimplemented] Unimplemented Feature. You shouldn't be able to hit this on the live build... Please contact developer"
-	case 0:
-		message = "[Generic_Failure] Contact developer"
-	case 1:
-		message = "[Generic_Success] Request Successful"
-	case 2:
-		message = "[Auth_Failure] Token was invalid or missing from request. Did you confirm sending the token as an authorization header?"
-	case 3:
-		message = "[Username_Validation_Failure] Please ensure username conforms to requirements and account does not already exist!"
-	case 4:
-		message = "[DB_Save_Failure] Failed to save to DB"
-	case 5:
-		message = "[Generate_Token_Failure] Username passed initial validation but could not generate token, contact Admin."
-	case 6:
-		message = "[WDB_Get_Failure] Could not get from world DB"
-	case 7:
-		message = "[UDB_Get_Failure] Could not get from user DB"
-	case 8:
-		message = "[JSON_Unmarshal_Error] Error while attempting to unmarshal JSON from DB"
-	case 9:
-		message = "[No_WDB_Context] Could not get WDB context from middleware"
-	case 10:
-		message = "[No_UDB_Context] Could not get UDB context from middleware"
-	case 11:
-		message = "[No_AuthPair_Context] Failed to get AuthPair context from middleware"
-	case 12:
-		message = "[User_Not_Found] User not found!"
-	case 13:
-		message = "[Not_Enough_Mana] Could not complete requested action due to insufficient mana"
-	case 14:
-		message = "[No_Such_Ritual] The specified ritual is not recognized"
-	case 15:
-		message = "[No_Golem_Found] Golem with the specified symbol could not be found in user data"
-	case 16:
-		message = "[Ritual_Not_Known] User does not know the specified ritual, so it cannot be executed"
-	case 17:
-		message = "[No_Such_Status] Specified status does not exist"
-	case 18:
-		message = "[Golem_In_Blocking_Status] Golem's current status does not allow changes to be made"
-	case 19:
-		message = "[New_Status_Not_Allowed] Specified status is not valid for the specified golem's archetype"
-	case 20:
-		message = "[Bad_Request] Invalid request payload, please validate the request body conforms to expectations"
-	case 21:
-		message = "[No_Available_Routes] No routes available for the specified golem, contact developer"
-	case 22:
-		message = "[Target_Route_Unavailable] The specified route is not available at the current location"
-	case 23:
-		message = "[UDB_Update_Failed] Could not complete request due to error while saving user data to udb"
-	case 24:
-		message = "[Leaderboard_Not_Found] Requested leaderboard not found"
-	case 25:
-		message = "[No_Resource_Nodes_At_Location] No resources nodes found at the location of the specified golem"
-	case 26:
-		message = "[Target_Resource_Node_Unavailable] The specified resource node is not available at the current location"
-	case 27:
-		message = "[No_Packable_Items] No packable items in location inventory at specified golem's locale"
-	case 28:
-		message = "[Invalid_Manifest] Invalid manifest, specified item not contained in sufficient quantity in specified inventory"
-	case 29:
-		message = "[Manifest_Overflow] Manifest is valid but requests more items than the golem can handle"
-	case 30:
-		message = "[No_Storable_Items] No storable items in the specified golem's inventory"
-	case 31:
-		message = "[Blank_Manifest_Disallowed] Manifest cannot be blank, please includes items to load"
-	case 32:
-		message = "[Blank_Order_Disallowed] Order cannot be blank, please includes order type, item symbol, quantity, target price, and force_execution"
-	case 33:
-		message = "[Merchant_Inventory_Empty] Merchant must be holding the items you wish to sell"
-	case 34:
-		message = "[Invalid_Order_Type] Type of the specified order does not match any known type"
-	case 35:
-		message = "[Insufficient_Resources_Held] The specified action could not be completed due to insufficient resources in golem inventory"
-	case 36:
-		message = "[Clearinghouse_Spool_Error] Order incorrectly spooled by clearinhouse, could not execute when asked"
-	case 37:
-		message = "[Could_Not_Decode_Order] Error occurred while decoding order, ensure formatting is correct"
-	default:
-		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
-	}
+type ResponseConfig struct {
+	Message string `json:"message" binding:"required"`
+	HttpResponse int `json:"http_response" binding:"required"`
+}
+var ResponseMap = map[ResponseCode]ResponseConfig{
+	CRITICAL_JSON_MARSHAL_ERROR: {
+		Message: "[CRITICAL_JSON_MARSHAL_ERROR] Server error in responses.JSON, could not marshal JSON_Marshal_Error response! PLEASE contact developer.",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	JSON_Marshal_Error: {
+		Message: "[JSON_Marshal_Error] Responses module encountered an error while marshaling response JSON. Please contact developer.",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	Unimplemented: {
+		Message: "[Unimplemented] Unimplemented Feature. You shouldn't be able to hit this on the live build... Please contact developer",
+		HttpResponse: http.StatusNotImplemented,
+	},
+	Generic_Failure: {
+		Message: "[Generic_Failure] Contact developer",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Generic_Success: {
+		Message: "[Generic_Success] Request Successful",
+		HttpResponse: http.StatusOK,
+	},
+	Auth_Failure: {
+		Message: "[Auth_Failure] Token was invalid or missing from request. Did you confirm sending the token as an authorization header?",
+		HttpResponse: http.StatusUnauthorized,
+	},
+	Username_Validation_Failure: {
+		Message: "[Username_Validation_Failure] Please ensure username conforms to requirements and account does not already exist!",
+		HttpResponse: http.StatusBadRequest,
+	},
+	DB_Save_Failure: {
+		Message: "[DB_Save_Failure] Failed to save to DB",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	Generate_Token_Failure: {
+		Message: "[Generate_Token_Failure] Username passed initial validation but could not generate token, contact Admin.",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	WDB_Get_Failure: {
+		Message: "[WDB_Get_Failure] Could not get from world DB",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	UDB_Get_Failure: {
+		Message: "[UDB_Get_Failure] Could not get from user DB",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	JSON_Unmarshal_Error: {
+		Message: "[JSON_Unmarshal_Error] Error while attempting to unmarshal JSON from DB",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	No_WDB_Context: {
+		Message: "[No_WDB_Context] Could not get WDB context from middleware",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	No_UDB_Context: {
+		Message: "[No_UDB_Context] Could not get UDB context from middleware",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	No_AuthPair_Context: {
+		Message: "[No_AuthPair_Context] Failed to get AuthPair context from middleware",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	User_Not_Found: {
+		Message: "[User_Not_Found] User not found!",
+		HttpResponse: http.StatusNotFound,
+	},
+	Not_Enough_Mana: {
+		Message: "[Not_Enough_Mana] Could not complete requested action due to insufficient mana",
+		HttpResponse: http.StatusNotAcceptable,
+	},
+	No_Such_Ritual: {
+		Message: "[No_Such_Ritual] The specified ritual is not recognized",
+		HttpResponse: http.StatusNotFound,
+	},
+	No_Golem_Found: {
+		Message: "[No_Golem_Found] Golem with the specified symbol could not be found in user data",
+		HttpResponse: http.StatusNotFound,
+	},
+	Ritual_Not_Known: {
+		Message: "[Ritual_Not_Known] User does not know the specified ritual, so it cannot be executed",
+		HttpResponse: http.StatusForbidden,
+	},
+	No_Such_Status: {
+		Message: "[No_Such_Status] Specified golem status does not exist",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Golem_In_Blocking_Status: {
+		Message: "[Golem_In_Blocking_Status] Golem's current status does not allow changes to be made",
+		HttpResponse: http.StatusConflict,
+	},
+	New_Status_Not_Allowed: {
+		Message: "[New_Status_Not_Allowed] Specified status is not valid for the specified golem's archetype",
+		HttpResponse: http.StatusNotAcceptable,
+	},
+	Bad_Request: {
+		Message: "[Bad_Request] Invalid request payload, please validate the request body conforms to expectations",
+		HttpResponse: http.StatusBadRequest,
+	},
+	No_Available_Routes: {
+		Message: "[No_Available_Routes] No routes available for the specified golem, contact developer",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	Target_Route_Unavailable: {
+		Message: "[Target_Route_Unavailable] The specified route is not available at the current location",
+		HttpResponse: http.StatusNotAcceptable,
+	},
+	UDB_Update_Failed: {
+		Message: "[UDB_Update_Failed] Could not complete request due to error while saving user data to udb",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	Leaderboard_Not_Found: {
+		Message: "[Leaderboard_Not_Found] Requested leaderboard not found",
+		HttpResponse: http.StatusNotFound,
+	},
+	No_Resource_Nodes_At_Location: {
+		Message: "[No_Resource_Nodes_At_Location] No resources nodes found at the location of the specified golem",
+		HttpResponse: http.StatusNotFound,
+	},
+	Target_Resource_Node_Unavailable: {
+		Message: "[Target_Resource_Node_Unavailable] The specified resource node is not available at the current location",
+		HttpResponse: http.StatusNotFound,
+	},
+	No_Packable_Items: {
+		Message: "[No_Packable_Items] No packable items in location inventory at specified golem's locale",
+		HttpResponse: http.StatusNotFound,
+	},
+	Invalid_Manifest: {
+		Message: "[Invalid_Manifest] Invalid manifest, specified item not contained in sufficient quantity in specified inventory",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Manifest_Overflow: {
+		Message: "[Manifest_Overflow] Manifest is valid but requests more items than the golem can handle",
+		HttpResponse: http.StatusNotAcceptable,
+	},
+	No_Storable_Items: {
+		Message: "[No_Storable_Items] No storable items in the specified golem's inventory",
+		HttpResponse: http.StatusNotFound,
+	},
+	Blank_Manifest_Disallowed: {
+		Message: "[Blank_Manifest_Disallowed] Manifest cannot be blank, please includes items to load",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Blank_Order_Disallowed: {
+		Message: "[Blank_Order_Disallowed] Order cannot be blank, please includes order type, item symbol, quantity, target price, and force_execution",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Merchant_Inventory_Empty: {
+		Message: "[Merchant_Inventory_Empty] Merchant must be holding the items you wish to sell",
+		HttpResponse: http.StatusNotAcceptable,
+	},
+	Invalid_Order_Type: {
+		Message: "[Invalid_Order_Type] Type of the specified order does not match any known type",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Insufficient_Resources_Held: {
+		Message: "[Insufficient_Resources_Held] The specified action could not be completed due to insufficient resources in golem inventory",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Clearinghouse_Spool_Error: {
+		Message: "[Clearinghouse_Spool_Error] Order incorrectly spooled by clearinhouse, could not execute when asked",
+		HttpResponse: http.StatusInternalServerError,
+	},
+	Could_Not_Decode_Order: {
+		Message: "[Could_Not_Decode_Order] Error occurred while decoding order, ensure formatting is correct",
+		HttpResponse: http.StatusBadRequest,
+	},
+	Golem_Locked_For_Editing: {
+		Message: "[Golem_Locked_For_Editing] Server is handling another request for this golem and has locked the data, please retry request later",
+		HttpResponse: http.StatusConflict,
+	},
+}
 
+// Returns the prettified json string of a properly structure api response given the inputs
+func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (string, int, error) {
+	var message string
+	var httpResponse int
+	// Based on code choose base message text
+	responseConfig, ok := ResponseMap[code]
+	if !ok {
+		message = "[Unexpected_Error] ResponseCode not in valid enum range! Contact developer"
+		httpResponse = http.StatusInternalServerError
+	} else {
+		message = responseConfig.Message
+		httpResponse = responseConfig.HttpResponse
+	}
+	
 	// Define response
 	var res Response = Response {
 		Code: code,
@@ -175,21 +274,28 @@ func FormatResponse(code ResponseCode, data interface{}, messageDetail string) (
 
 	responseText, jsonErr := JSON(res)
 	if jsonErr != nil {
-		return "", jsonErr
+		return "", httpResponse, jsonErr
 	}
-	return responseText, nil
+	return responseText, httpResponse, nil
 }
 
 func SendRes(w http.ResponseWriter, code ResponseCode, data interface{}, messageDetail string) {
-	responseObject, jsonErr := FormatResponse(code, data, messageDetail)
+	responseObject, httpResponse, jsonErr := FormatResponse(code, data, messageDetail)
 	if jsonErr != nil {
 		jsonErrMsg := fmt.Sprintf("Could not MarshallIndent json for data %v", data)
-		errResponseObject, criticalJsonError := FormatResponse(JSON_Marshal_Error, nil, jsonErrMsg)
+		errResponseObject, errHttpResponse, criticalJsonError := FormatResponse(JSON_Marshal_Error, nil, jsonErrMsg)
 		if criticalJsonError != nil {
 			log.Error.Printf("Could not format MarshallIndent response, error: %v", criticalJsonError)
-			fmt.Fprintf(w, "{\"code\":-3, \"message\": \"CRITICAL SERVER ERROR in responses.JSON, could not marshal JSON_Marshal_Error response! PLEASE contact developer. Error: %v\", \"data\":{}", criticalJsonError)
+			w.WriteHeader(http.StatusInternalServerError)
+			msg := fmt.Sprintf("{\"code\":-3, \"message\": \"CRITICAL SERVER ERROR in responses.JSON, could not marshal JSON_Marshal_Error response! PLEASE contact developer. Error: %v\", \"data\":{}", criticalJsonError)
+			w.Write([]byte(msg))
 		}
-		fmt.Fprint(w, errResponseObject)
+		w.WriteHeader(errHttpResponse)
+		w.Write([]byte(errResponseObject))
+		// fmt.Fprint(w, errResponseObject)
 	}
-	fmt.Fprint(w, responseObject)
+
+	w.WriteHeader(httpResponse)
+	w.Write([]byte(responseObject))
+	// fmt.Fprint(w, responseObject)
 }
