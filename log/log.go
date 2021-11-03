@@ -12,21 +12,31 @@ var (
 	Test *log.Logger
 	Error *log.Logger
 	Debug *log.Logger
+	RoutineDebug *log.Logger
 )
 
 func init() {
 	// Handle logging to file
 	var logpath = "./debug.ansi"
 	var debugFile, logErr = os.Create(logpath)
+	var rlogpath = "./rdebug.ansi"
+	var rdebugFile, rlogErr = os.Create(rlogpath)
 
 	if logErr != nil {
 		log.Fatalf("%v", logErr)
 	}
 
+	if rlogErr != nil {
+		log.Fatalf("%v", rlogErr)
+	}
+
 	// Debug writes logs in the color cyan with "DEBUG: " as prefix
 	Debug = log.New(debugFile, Cyan("DEBUG: "), log.LstdFlags|log.Lshortfile)
+	// RoutineDebug writes logs in the color cyan with "RDEBUG: " as prefix
+	RoutineDebug = log.New(rdebugFile, Cyan("RDEBUG: "), log.LstdFlags|log.Lshortfile)
 
 	multiOut := io.MultiWriter(os.Stdout, debugFile)
+	allOut := io.MultiWriter(os.Stdout, debugFile, rdebugFile)
 
 	// Info writes logs in the color blue with "INFO: " as prefix
 	Info = log.New(multiOut, Blue("INFO: "), log.LstdFlags)
@@ -38,7 +48,7 @@ func init() {
 	Test = log.New(multiOut, White(CyanBackground("TEST:")) + " ", log.LstdFlags|log.Lshortfile)
 
 	// Error writes logs in the color Red with "ERROR: " as prefix
-	Error = log.New(multiOut, Red("ERROR: "), log.LstdFlags|log.Lshortfile)
+	Error = log.New(allOut, Red("ERROR: "), log.LstdFlags|log.Lshortfile)
 }
 
 // Formatting functions

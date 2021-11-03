@@ -19,6 +19,7 @@ guild-golems
 
 # Debug Log (ansi format)
 debug.ansi
+rdebug.ansi
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
